@@ -128,6 +128,12 @@ module Device =
                                                      +0.5F, - 1.0F / (2.0F * sqrt 3.0F)
                                                      -0.5F, - 1.0F / (2.0F * sqrt 3.0F)
                                                 |]
+                    Triangle45x45x90        , DrawPathGeometryFromVertices 
+                                                [|
+                                                     +0.0F, +0.0F
+                                                     +0.5F, +0.5F
+                                                     -0.5F, +0.5F
+                                                |]
                     UnitSquare              , DrawPathGeometryFromVertices 
                                                 [|
                                                      +0.5F, +0.5F

@@ -9,7 +9,7 @@ open Fundamental
 module public Visual =
 
     // Compute pixel scale (approximation)
-    let private getLocalLength (transform : Matrix3x2) x y  = 
+    let inline private getLocalLength (transform : Matrix3x2, x : float32, y : float32)  = 
             let p = Vector2(x,y)
             let t = transform.TransformPoint p
             t.Length()
@@ -55,6 +55,7 @@ module public Visual =
         | Fork (l,r)        -> (HasVisuals l) && (HasVisuals r)
         | State (_,c)       -> HasVisuals c
 
+    // TODO: Use non-curry function for performance 
     let rec RenderTreeImpl 
         (state      : ApplicationState                              ) 
         (rt         : Direct2D1.RenderTarget                        ) 
@@ -118,7 +119,7 @@ module public Visual =
           
                 let fullTransform   = transform.Multiply newTransform
           
-                let pixelScale      = getLocalLength fullTransform 1.F 1.F
+                let pixelScale      = getLocalLength (fullTransform,1.F,1.F)
           
                 rt.Transform <- fullTransform
                                 

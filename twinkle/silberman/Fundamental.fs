@@ -74,6 +74,7 @@ module public Fundamental =
     [<StructuralComparison>]
     type ShapeDescriptor        =
         | EquilateralTriangle
+        | Triangle45x45x90
         | UnitSquare
           
     type AnimationEase      = Time->Time->float32->float32->ApplicationState->float32

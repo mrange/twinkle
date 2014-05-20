@@ -28,6 +28,8 @@ module public Fundamental =
         static member New bs c = {ButtonState = bs; Coordinate = c}
         static member Zero = MouseState.New Set.empty <| Vector2()
 
+        member x.Transform (t : Matrix3x2) = MouseState.New x.ButtonState <| t.TransformPoint x.Coordinate
+
     [<NoEquality>]
     [<NoComparison>]
     type ApplicationState = 
@@ -36,6 +38,9 @@ module public Fundamental =
             CurrentMouse    : MouseState
         }
         static member New ct cm = {CurrentTime = ct; CurrentMouse = cm}
+
+        member x.Transform (t : Matrix3x2) = ApplicationState.New x.CurrentTime <| x.CurrentMouse.Transform t
+
 
     [<StructuralEquality>]
     [<StructuralComparison>]

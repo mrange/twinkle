@@ -36,6 +36,7 @@ module public Visual =
                         LayoutRect  : AnimatedRectangleF    *
                         Foreground  : AnimatedBrush
         | Transform of  Transform   : AnimatedMatrix        *
+                        Reverse     : AnimatedMatrix        *
                         Child       : VisualTree
         | Group     of  Children    : VisualTree array
         | Fork      of  Left        : VisualTree            *
@@ -50,12 +51,15 @@ module public Visual =
         | Line _            -> true
         | Geometry _        -> true
         | Text _            -> true
-        | Transform (t,c)   -> HasVisuals c
+        | Transform (t,r,c) -> HasVisuals c
         | Group cs          -> (cs |> Array.tryFindIndex (fun c -> HasVisuals c)).IsSome
         | Fork (l,r)        -> (HasVisuals l) && (HasVisuals r)
         | State (_,c)       -> HasVisuals c
 
     // TODO: Use non-curry function for performance 
+    // TODO: Add support for geometry realizations
+    // TODO: Add support for caching of subtrees
+    
     let rec RenderTreeImpl 
         (state      : ApplicationState                              ) 
         (rt         : Direct2D1.RenderTarget                        ) 
@@ -99,7 +103,8 @@ module public Visual =
                 let bfill       = bc fill
                 let bstroke     = bc stroke
             
-                let fullTransform   = transform.Multiply trans
+                let fullTransform   = trans * transform
+
                 rt.Transform        <- fullTransform
 
                 if bfill <> null then rt.FillGeometry (gshape, bfill)
@@ -114,16 +119,17 @@ module public Visual =
                 let bforeground = bc foreground
           
                 if bforeground <> null then rt.DrawText(t, textFormat, layoutRect, bforeground)
-        | Transform (t,c) ->
-                let newTransform    = t state
-          
-                let fullTransform   = transform.Multiply newTransform
-          
+        | Transform (t,r,c) ->
+                let trans           = t state
+                let rtrans          = r state
+                let s               = state.Transform rtrans
+
+                let fullTransform   = trans * transform
                 let pixelScale      = getLocalLength (fullTransform,1.F,1.F)
           
                 rt.Transform <- fullTransform
-                                
-                RenderTreeImpl state rt tfc bc gc fullTransform pixelScale c
+
+                RenderTreeImpl s rt tfc bc gc fullTransform pixelScale c
           
                 rt.Transform <- transform                 
         | Group (cs) ->

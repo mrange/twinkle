@@ -58,11 +58,20 @@ module TwinkleGame =
         | 3 -> Down
         | _ -> Left
 
+    type VisualCell = 
+        {
+            mutable Rotation  : AnimatedFloat
+        }   
+        static member New () = 
+            {
+                Rotation = 0.F |> Animated.Constant
+            }
+
     type Cell = 
         {
             Colors                  : TwinkleColor[]
             mutable Direction       : Direction
-            mutable VisualRotation  : AnimatedFloat
+            Visual                  : VisualCell
         }
 
         member x.GetColor (d : Direction) : TwinkleColor = 
@@ -79,9 +88,9 @@ module TwinkleGame =
    
         static member New () = 
                         { 
-                            Colors          = [| for i in 0..3 -> Red |]
-                            Direction       = Left
-                            VisualRotation  = 0.F |> Animated.Constant 
+                            Colors      = [| for i in 0..3 -> Red |]
+                            Direction   = Left
+                            Visual      = VisualCell.New ()
                         }
 
     type Board =
@@ -97,7 +106,36 @@ module TwinkleGame =
                             Rows    = r 
                         }
 
-    let Visit 
+    let VisitCells 
+        (v          : Cell->int<X>->int<Y>->unit    ) 
+        (b          : Board                         ) 
+        =
+        let lasty = int <| b.Rows - 1<Rows>
+        let lastx = int <| b.Columns - 1<Columns>
+        for y in 0..lasty do
+            let dy = y * 1<Y>
+            for x in 0..lastx do
+                let dx = x * 1<X>
+                let cell = b.Cells.[y].[x]
+                v cell dx dy
+
+    let VisitFacets
+        (v          : Cell->int<X>->int<Y>->Direction->unit ) 
+        (b          : Board                                 ) 
+        =
+        let lasty = int <| b.Rows - 1<Rows>
+        let lastx = int <| b.Columns - 1<Columns>
+        for y in 0..lasty do
+            let dy = y * 1<Y>
+            for x in 0..lastx do
+                let dx = x * 1<X>
+                let cell = b.Cells.[y].[x]
+                v cell dx dy Left
+                v cell dx dy Up
+                v cell dx dy Right
+                v cell dx dy Down
+
+    let VisitAdjacent 
         (isolated   : Cell->int<X>->int<Y>->Direction->unit                                 ) 
         (adjacent   : Cell->int<X>->int<Y>->Direction->Cell->int<X>->int<Y>->Direction->unit) 
         (b          : Board                                                                 ) 
@@ -142,7 +180,7 @@ module TwinkleGame =
             | 6 -> Violet
             | _ -> Red
         let b = Board.New c r
-        b |> Visit 
+        b |> VisitAdjacent 
                 (fun c _ _ d -> c.SetColor d <| color ()) 
                 (fun c _ _ d oc _ _ od -> 
                     let cl = color ()
@@ -152,17 +190,12 @@ module TwinkleGame =
         b
 
     let ShakeBoard (random : Random) (b : Board) =
-        b |> Visit 
-                (fun c _ _ d -> c.Rotate <| random.Next(0, Facets))
-                (fun c _ _ d oc _ _ od -> 
-                    c.Rotate    <| random.Next(0, Facets)
-                    oc.Rotate   <| random.Next(0, Facets)
-                )
+        b |> VisitCells (fun c _ _ -> c.Rotate <| random.Next(0, Facets))
         b
 
     let CheckWinCondition (b : Board) = 
         let mismatches = ref 0
-        b |> Visit 
+        b |> VisitAdjacent 
                 (fun c _ _ d -> ())
                 (fun c _ _ d oc _ _ od -> 
                     let cl  = c.GetColor d
@@ -179,6 +212,9 @@ module TwinkleGame =
             inherit Foundation.Element()
 
             let stroke      = SolidBrush Color.Black
+
+            let overlay     = SolidBrush Color.White
+
             let fills       = 
                 [
                     Red     , SolidBrush Color.Red   
@@ -191,37 +227,65 @@ module TwinkleGame =
                 ] |> Map.ofList
 
             let createVisualFacet (c : Cell) (x : int<X>) (y : int<Y>) (direction : Direction) =
+                let v = c.Visual
                 let s = stroke                      |> Animated.Brush.Opaque
                 let f = fills.[c.GetColor direction]|> Animated.Brush.Opaque
                 let r = float32 Math.PI * 2.0F / 4.0F + float32 Math.PI * 2.0F * (float32 <| DirectionToInt direction) / (float32 Facets)
-                let t = 
-                    Matrix3x2.Rotation r                *
+                let ft = 
                     Matrix3x2.Scaling 100.F             *
-                    Matrix3x2.Translation (200.F + 100.F * float32 x, 200.F + 100.F * float32 y)
-                    |> Animated.Constant
+                    Matrix3x2.Translation (50.F + 100.F * float32 x, 50.F + 100.F * float32 y)
+
+                let t (s : ApplicationState) = 
+                    let fr = r + v.Rotation s
+                    Matrix3x2.Rotation fr * ft
+
                 let sw= 0.02F       |> Animated.Constant
                 VisualTree.Geometry (Triangle45x45x90, s, f, t, sw)
 
+            let createVisualOverlay (c : Cell) (x : int<X>) (y : int<Y>) =
+                let rect = RectangleF (100.F * float32 x, 100.F * float32 y, 100.F, 100.F)
+                let v = c.Visual
+                let s = Animated.Brush.Transparent
+                let f (s : ApplicationState) = 
+                    if rect.Contains s.CurrentMouse.Coordinate then
+                        overlay, 0.5F
+                    else
+                        Transparent, 0.F
+
+                let ft = 
+                    Matrix3x2.Scaling 100.F             *
+                    Matrix3x2.Translation (50.F + 100.F * float32 x, 50.F + 100.F * float32 y)
+
+                let t (s : ApplicationState) = 
+                    let fr = v.Rotation s
+                    Matrix3x2.Rotation fr * ft
+
+                let sw= 0.02F       |> Animated.Constant
+                VisualTree.Geometry (UnitSquare, s, f, t, sw)
+
             let transform (state : ApplicationState)    = 
-                let time    = state.CurrentTime
-//                Matrix3x2.Rotation time             *
-//                Matrix3x2.Scaling 100.F             *
-//                Matrix3x2.Translation (4.F, 4.F)
-                Matrix3x2.Identity
+                let time = state.CurrentTime
+                Matrix3x2.Rotation time                 *
+                Matrix3x2.Translation (100.F, 100.F)
+            let rtransform (state : ApplicationState)   = 
+                let time = state.CurrentTime
+                Matrix3x2.Translation (-100.F, -100.F)  *
+                Matrix3x2.Rotation -time                 
 
             let random  = Random 19740531
 
-            let board   = CreateBoard random 5<Columns> 5<Rows> // |> ShakeBoard random
+            let board   = CreateBoard random 5<Columns> 5<Rows> |> ShakeBoard random
 
             let vt      =
-                let facets = List<VisualTree>()
-                board |> Visit 
-                            (fun c x y d -> facets.Add <| createVisualFacet c x y d)
-                            (fun c x y d oc ox oy od -> 
-                                facets.Add <| createVisualFacet c x y d
-                                facets.Add <| createVisualFacet oc ox oy od
-                            )
-                VisualTree.Group <| facets.ToArray ()
+                let group = List<VisualTree>()
+                board |> VisitCells (fun c x y -> 
+                                        group.Add <| createVisualFacet c x y Left
+                                        group.Add <| createVisualFacet c x y Up
+                                        group.Add <| createVisualFacet c x y Right
+                                        group.Add <| createVisualFacet c x y Down
+                                        group.Add <| createVisualOverlay c x y
+                                    )
+                VisualTree.Group <| group.ToArray ()
                     
     
             override x.OnMeasureContent a = 
@@ -231,7 +295,7 @@ module TwinkleGame =
 
             override x.OnRenderContent  (o : Placement)
                                         (i : Placement) =
-                        VisualTree.Transform (transform,vt)
+                        VisualTree.Transform (transform, rtransform, vt)
 
     let Game (pvs : Foundation.PropertyValue list) = Logical.CreateElement<Elements.GameElement> pvs
 

@@ -51,7 +51,7 @@ module TwinkleGame =
         | Down  -> 3
 
     let IntToDirection (i : int) = 
-        match (i % Facets) with
+        match ((i % Facets) + Facets) % Facets with
         | 0 -> Left
         | 1 -> Up
         | 2 -> Right
@@ -60,11 +60,13 @@ module TwinkleGame =
 
     type VisualCell = 
         {
-            mutable Rotation  : AnimatedFloat
+            mutable Rotation            : AnimatedFloat
+            mutable LeftButtonPressed   : bool
         }   
         static member New () = 
             {
-                Rotation = 0.F |> Animated.Constant
+                Rotation            = 0.F |> Animated.Constant 
+                LeftButtonPressed   = false
             }
 
     type Cell = 
@@ -74,17 +76,23 @@ module TwinkleGame =
             Visual                  : VisualCell
         }
 
-        member x.GetColor (d : Direction) : TwinkleColor = 
+        member x.GetRotatedColor (d : Direction) : TwinkleColor = 
             let dir = ((DirectionToInt d) + (DirectionToInt x.Direction)) % Facets
             x.Colors.[dir]
 
+        member x.GetColor (d : Direction) : TwinkleColor = 
+            let dir = DirectionToInt d
+            x.Colors.[dir]
+
         member x.SetColor (d : Direction) (c : TwinkleColor) = 
-            let dir = ((DirectionToInt d) + (DirectionToInt x.Direction)) % Facets
+            let dir = DirectionToInt d
             x.Colors.[dir] <- c
 
         member x.Rotate (i : int) = 
             let dir = (DirectionToInt x.Direction) + i
             x.Direction <- IntToDirection dir
+
+        member x.RotationInDegree = float32 <| 2.0 * Math.PI * (float <| DirectionToInt x.Direction) / (float x.Colors.Length)
    
         static member New () = 
                         { 
@@ -198,18 +206,23 @@ module TwinkleGame =
         b |> VisitAdjacent 
                 (fun c _ _ d -> ())
                 (fun c _ _ d oc _ _ od -> 
-                    let cl  = c.GetColor d
-                    let ocl = oc.GetColor od
+                    let cl  = c.GetRotatedColor d
+                    let ocl = oc.GetRotatedColor od
                     if cl <> ocl then
                         mismatches := !mismatches + 1
                 )
         !mismatches = 0
 
+    type FromVisualMessage =
+            | CellClicked of Cell
+
     module Elements = 
         open Visual
 
-        type GameElement() =
+        type GameElement() as x =
             inherit Foundation.Element()
+
+            let fromVisual = BlockingQueue<FromVisualMessage> ()
 
             let stroke      = SolidBrush Color.Black
 
@@ -239,6 +252,8 @@ module TwinkleGame =
                     let fr = r + v.Rotation s
                     Matrix3x2.Rotation fr * ft
 
+                v.Rotation <- c.RotationInDegree |> Animated.Constant
+
                 let sw= 0.02F       |> Animated.Constant
                 VisualTree.Geometry (Triangle45x45x90, s, f, t, sw)
 
@@ -248,8 +263,13 @@ module TwinkleGame =
                 let s = Animated.Brush.Transparent
                 let f (s : ApplicationState) = 
                     if rect.Contains s.CurrentMouse.Coordinate then
+                        let leftButtonPressed = s.CurrentMouse.ButtonState.Contains MouseButtonStates.Left
+                        if v.LeftButtonPressed && not leftButtonPressed then
+                            fromVisual.Enqueue <| CellClicked c
+                        v.LeftButtonPressed <- leftButtonPressed
                         overlay, 0.5F
                     else
+                        v.LeftButtonPressed <- false
                         Transparent, 0.F
 
                 let ft = 
@@ -265,16 +285,16 @@ module TwinkleGame =
 
             let transform (state : ApplicationState)    = 
                 let time = state.CurrentTime
-                Matrix3x2.Rotation time                 *
+//                Matrix3x2.Rotation time                 *
                 Matrix3x2.Translation (100.F, 100.F)
             let rtransform (state : ApplicationState)   = 
                 let time = state.CurrentTime
-                Matrix3x2.Translation (-100.F, -100.F)  *
-                Matrix3x2.Rotation -time                 
+                Matrix3x2.Translation (-100.F, -100.F)  
+//                Matrix3x2.Rotation -time                 
 
             let random  = Random 19740531
 
-            let board   = CreateBoard random 5<Columns> 5<Rows> |> ShakeBoard random
+            let board   = CreateBoard random 3<Columns> 3<Rows> |> ShakeBoard random
 
             let vt      =
                 let group = List<VisualTree>()
@@ -286,8 +306,35 @@ module TwinkleGame =
                                         group.Add <| createVisualOverlay c x y
                                     )
                 VisualTree.Group <| group.ToArray ()
-                    
-    
+
+            let gameLoop = 
+                async {
+                    do! Async.SwitchToNewThread ()
+                    while true do
+                        let! messages = fromVisual.AsyncDequeue 100
+
+                        for message in messages do
+                            match message with 
+                            | CellClicked cell  -> 
+                                    let ct = Fundamental.CurrentTime ()
+                                    let nt = ct + 0.2F
+                                    let pd = cell.RotationInDegree
+                                    cell.Rotate 1
+                                    let d   = cell.RotationInDegree
+                                    let nd  = d + (float32 <| 2.0 * Math.PI)
+                                    let cd  = if (abs <| d - pd) < (abs <| nd - pd) then d else nd
+                                    let a = Animated.Float Animated.Ease.Linear ct nt pd cd
+                                    cell.Visual.Rotation <- a
+
+                    return ()
+                }
+
+            do
+                x.SetEventHandler Events.Attached <| fun eh _ -> Async.StartImmediate gameLoop
+                                                                 true
+                x.SetEventHandler Events.Detached <| fun eh _ -> true
+                
+
             override x.OnMeasureContent a = 
                         Measurement.Fill
 

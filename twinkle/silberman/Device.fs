@@ -9,7 +9,7 @@ open SharpDX.Direct2D1
 
 open Fundamental
 
-module Device = 
+module internal Device = 
     
     type DirectWrite () = 
         let dwFactory           = new DirectWrite.Factory (DirectWrite.FactoryType.Shared)

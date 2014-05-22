@@ -3,13 +3,14 @@
 open SharpDX
 
 open System
+open System.Collections.Generic
+open System.Threading
 
 module public Fundamental = 
 
     type Time = float32
     
-    type IIdentifiable = 
-        abstract member Id : int 
+    let CurrentTime () : Time = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
 
     [<StructuralEquality>]
     [<StructuralComparison>]
@@ -374,8 +375,69 @@ module public Fundamental =
                             | _                 , _             , _          -> ppos,psize
 
 
+    type BlockingQueue<'T>() =
+        let safe    = obj()
+        let queue   = Queue<'T>()                                            
+
+        member x.Enqueue (v : 'T) =
+            Monitor.Enter safe
+            try
+                queue.Enqueue v
+                Monitor.Pulse safe
+            finally
+                Monitor.Exit safe
+
+        member x.EnqueueValues (vs : 'T array) =
+            Monitor.Enter safe
+            try
+                for v in vs do
+                    queue.Enqueue v
+                Monitor.Pulse safe
+            finally
+                Monitor.Exit safe
+
+        member x.TryDequeue (timeOut : int) (ct : CancellationToken) : 'T array =
+
+            let now = CurrentTimeInMs ()
+            let waitUntil = now + (max 0L <| int64 timeOut)
+
+            Monitor.Enter safe
+            try
+                let mutable result = [||]
+                let mutable cont = true
+                while cont do
+                    if queue.Count > 0 then
+                        result <-   [|                
+                                        while queue.Count > 0 do
+                                            yield queue.Dequeue ()
+                                    |]
+                        cont <- false
+                    else
+                        let waitFor = int32 <| waitUntil - CurrentTimeInMs ()
+                        if waitFor > 0 then
+                            cont <- Monitor.Wait(safe,waitFor)
+                        else
+                            cont <- false
+
+                result
+            finally
+                Monitor.Exit safe
+
+
+        member x.AsyncDequeue (timeOut : int) : Async<'T array> =
+            let dequeue ct =    Async.FromContinuations <| fun (cont, econt, ccont) -> 
+                                    try
+                                        let d = x.TryDequeue timeOut ct
+                                        if not ct.IsCancellationRequested then
+                                            cont d
+                                        else
+                                            ccont <| OperationCanceledException ()
+                                    with
+                                        | e -> econt e
+            async.Bind(Async.CancellationToken,dequeue)
+
 [<AutoOpen>]
-module FundamentalUtils = 
+module FundamentalAutoOpen = 
 
     open Fundamental
 

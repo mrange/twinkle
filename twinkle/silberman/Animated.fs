@@ -15,7 +15,7 @@ module public Animated =
             elif state.CurrentTime > e then t
             else    
                 let m = (state.CurrentTime - b) / (e - b)
-                m*(state.CurrentTime - f) + f   
+                m*(t - f) + f   
 
     let Float (ease : AnimationEase) b e f t : AnimatedFloat = 
         ease b e f t

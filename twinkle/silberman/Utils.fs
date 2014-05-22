@@ -42,6 +42,18 @@ module internal Utils =
         | IsPositiveInfinity    -> v
         | IsPositive            -> v
         | _                     -> 0.F
+    
+    let IsNear a b = (abs <| a - b) < 0.0001F
+
+    let IsIdentity (m : Matrix3x2) =
+        IsNear 1.0F m.M11   &&
+        IsNear 0.0F m.M12   &&
+        IsNear 0.0F m.M21   &&
+        IsNear 1.0F m.M22   &&
+        IsNear 0.0F m.M31   &&
+        IsNear 0.0F m.M32
+         
+        
 
     let Log             (message  : string)= printfn "Information : %s" message
     let LogWarning      (message  : string)= printfn "Warning     : %s" message

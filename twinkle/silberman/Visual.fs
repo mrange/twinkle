@@ -1,6 +1,7 @@
 ﻿namespace silberman
 
 open System
+open System.Diagnostics
 
 open SharpDX
 
@@ -122,6 +123,9 @@ module public Visual =
         | Transform (t,r,c) ->
                 let trans           = t state
                 let rtrans          = r state
+
+                Debug.Assert (IsIdentity <| trans.Multiply rtrans)
+
                 let s               = state.Transform rtrans
 
                 let fullTransform   = trans * transform

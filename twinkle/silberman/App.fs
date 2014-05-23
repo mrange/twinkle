@@ -124,17 +124,9 @@ module public App =
                 
                     d2dRenderTarget.Clear(AsNullable <| Color.White.ToColor4())
 
-                    let tfc        = d.DirectWrite.GetTextFormat
-                    let bc (bd, o) =    if o > 0.F then
-                                            let b = d.GetBrush bd
-                                            if b <> null then b.Opacity <- o
-                                            b
-                                        else null
-                    let gc s       = d.GetShape s
-
                     let appState = ApplicationState.New (CurrentTime()) <| !mouseState 
 
-                    Visual.RenderTree appState d2dRenderTarget tfc bc gc !vt
+                    Visual.RenderTree appState d2dRenderTarget d !vt
 
                 if ct.IsCancellationRequested then shutdown ()
 

@@ -201,6 +201,14 @@ module TwinkleGame =
         b |> VisitCells (fun c _ _ -> c.Rotate <| random.Next(0, Facets))
         b
 
+    let UpdateVisual (b : Board) =
+        b |> VisitCells 
+                (fun c _ _ -> 
+                    let r = c.RotationInDegree
+                    c.Visual.Rotation <- r |> Animated.Constant
+                )
+        b
+
     let CheckWinCondition (b : Board) = 
         let mismatches = ref 0
         b |> VisitAdjacent 
@@ -222,11 +230,14 @@ module TwinkleGame =
         type GameElement() as x =
             inherit Foundation.Element()
 
+            let side        = 100.F
+            let halfside    = side / 2.0F
+
             let fromVisual = BlockingQueue<FromVisualMessage> ()
 
             let stroke      = SolidBrush Color.Black
 
-            let overlay     = SolidBrush Color.White
+            let overlay     = SolidBrush Color.Black
 
             let fills       = 
                 [
@@ -245,20 +256,14 @@ module TwinkleGame =
                 let f = fills.[c.GetColor direction]|> Animated.Brush.Opaque
                 let r = float32 Math.PI * 2.0F / 4.0F + float32 Math.PI * 2.0F * (float32 <| DirectionToInt direction) / (float32 Facets)
                 let ft = 
-                    Matrix3x2.Scaling 100.F             *
-                    Matrix3x2.Translation (50.F + 100.F * float32 x, 50.F + 100.F * float32 y)
+                    Matrix3x2.Rotation r                *
+                    Matrix3x2.Scaling side             
 
-                let t (s : ApplicationState) = 
-                    let fr = r + v.Rotation s
-                    Matrix3x2.Rotation fr * ft
+                let sw= 2.0F |> Animated.Constant
+                VisualTree.TransformedGeometry (Triangle45x45x90, s, f, ft, sw)
 
-                v.Rotation <- c.RotationInDegree |> Animated.Constant
-
-                let sw= 0.02F       |> Animated.Constant
-                VisualTree.Geometry (Triangle45x45x90, s, f, t, sw)
-
-            let createVisualOverlay (c : Cell) (x : int<X>) (y : int<Y>) =
-                let rect = RectangleF (100.F * float32 x, 100.F * float32 y, 100.F, 100.F)
+            let createVisualOverlay (c : Cell) =
+                let rect = RectangleF(-halfside, -halfside, side, side)
                 let v = c.Visual
                 let s = Animated.Brush.Transparent
                 let f (s : ApplicationState) = 
@@ -273,39 +278,49 @@ module TwinkleGame =
                         Transparent, 0.F
 
                 let ft = 
-                    Matrix3x2.Scaling 100.F             *
-                    Matrix3x2.Translation (50.F + 100.F * float32 x, 50.F + 100.F * float32 y)
+                    Matrix3x2.Scaling side             
 
-                let t (s : ApplicationState) = 
-                    let fr = v.Rotation s
-                    Matrix3x2.Rotation fr * ft
-
-                let sw= 0.02F       |> Animated.Constant
-                VisualTree.Geometry (UnitSquare, s, f, t, sw)
+                let sw= 2.0F |> Animated.Constant
+                VisualTree.TransformedGeometry (UnitSquare, s, f, ft, sw)
 
             let transform (state : ApplicationState)    = 
-                let time = state.CurrentTime
-//                Matrix3x2.Rotation time                 *
-                Matrix3x2.Translation (100.F, 100.F)
+                Matrix3x2.Translation (side, side)
             let rtransform (state : ApplicationState)   = 
-                let time = state.CurrentTime
-                Matrix3x2.Translation (-100.F, -100.F)  
-//                Matrix3x2.Rotation -time                 
+                Matrix3x2.Translation (-side, -side)  
 
             let random  = Random ()
 
-            let board   = CreateBoard random 6<Columns> 6<Rows> |> ShakeBoard random
+            let board   =   CreateBoard random 5<Columns> 5<Rows> 
+                            |> ShakeBoard random
+                            |> UpdateVisual
 
             let vt      =
-                let group = List<VisualTree>()
+                let outerGroup = List<VisualTree>()
                 board |> VisitCells (fun c x y -> 
-                                        group.Add <| createVisualFacet c x y Left
-                                        group.Add <| createVisualFacet c x y Up
-                                        group.Add <| createVisualFacet c x y Right
-                                        group.Add <| createVisualFacet c x y Down
-                                        group.Add <| createVisualOverlay c x y
+                                        let innerGroup = List<VisualTree>()
+
+                                        let v = c.Visual
+
+                                        let t (s : ApplicationState) = 
+                                            let r = v.Rotation s
+                                            Matrix3x2.Rotation r                                        *
+                                            Matrix3x2.Translation (halfside + side * float32 x, halfside + side * float32 y)
+                                        let rt (s : ApplicationState) = 
+                                            let r = v.Rotation s
+                                            Matrix3x2.Translation (- halfside - side * float32 x, -halfside - side * float32 y)  *
+                                            Matrix3x2.Rotation -r
+
+                                        innerGroup.Add <| createVisualFacet c x y Left
+                                        innerGroup.Add <| createVisualFacet c x y Up
+                                        innerGroup.Add <| createVisualFacet c x y Right
+                                        innerGroup.Add <| createVisualFacet c x y Down
+                                        innerGroup.Add <| createVisualOverlay c
+
+                                        let g = VisualTree.Group <| innerGroup.ToArray ()
+                                        let t = VisualTree.Transform (t,rt, g)
+                                        outerGroup.Add t
                                     )
-                VisualTree.Group <| group.ToArray ()
+                VisualTree.Group <| outerGroup.ToArray ()
 
             let gameLoop = 
                 async {

@@ -374,7 +374,7 @@ module public Fundamental =
                                                                                 ppos + psize - size,size
                             | _                 , _             , _          -> ppos,psize
 
-
+    
     type BlockingQueue<'T>() =
         let safe    = obj()
         let queue   = Queue<'T>()                                            

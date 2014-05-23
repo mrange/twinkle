@@ -9,9 +9,9 @@ open SharpDX.Direct2D1
 
 open Fundamental
 
-module internal Device = 
+module public Device = 
     
-    type DirectWrite () = 
+    type internal DirectWrite () = 
         let dwFactory           = new DirectWrite.Factory (DirectWrite.FactoryType.Shared)
 
         let textFormatCache     = ConcurrentDictionary<TextFormatDescriptor, DirectWrite.TextFormat>()
@@ -34,8 +34,17 @@ module internal Device =
                 for kv in tfc do
                     TryDispose kv.Value 
         
+    [<AbstractClass>]
+    type GenericDevice() =
+        abstract member GetBrush                : BrushDescriptor*float32   -> Direct2D1.Brush
+        abstract member GetTextFormat           : TextFormatDescriptor      -> DirectWrite.TextFormat
+        abstract member GetGeometry             : ShapeDescriptor           -> Direct2D1.Geometry
+        abstract member GetTransformedGeometry  : ShapeDescriptor*Matrix3x2 -> Direct2D1.Geometry
+        
 
-    type WindowedDevice(form : Windows.RenderForm) = 
+    type internal WindowedDevice(form : Windows.RenderForm) = 
+
+        inherit GenericDevice()
 
         let GetDeviceAndSwapChain (form : Windows.RenderForm) =
             let width               = form.ClientSize.Width
@@ -101,14 +110,12 @@ module internal Device =
                                         )
                                     )
 
-        let brushCache = ConcurrentDictionary<BrushDescriptor, Direct2D1.Brush>()
-
         let DrawPathGeometry (painter : GeometrySink->unit) : Direct2D1.Geometry =
             let pg = new PathGeometry(d2dFactory)
             use sink = pg.Open ()
             painter sink
             sink.Close ()
-            pg :> Direct2D1.Geometry
+            upcast pg
 
         let DrawPathGeometryFromVertices (vertices : (float32*float32) array) : Direct2D1.Geometry =
             DrawPathGeometry <| fun sink ->
@@ -120,7 +127,16 @@ module internal Device =
                     sink.AddLine (Vector2 (x,y))
                 sink.EndFigure FigureEnd.Closed
 
-        let shapeCache = 
+        let brushCache = ConcurrentDictionary<BrushDescriptor, Direct2D1.Brush>()
+
+        let Solid (c : ColorDescriptor) =  new Direct2D1.SolidColorBrush(d2dRenderTarget, c.ToColor4)                                    
+
+        let CreateBrush (bd : BrushDescriptor) : Direct2D1.Brush = 
+                match bd with
+                | Transparent       -> null
+                | SolidColor c      -> upcast Solid c
+            
+        let geometryCache = 
                 [
                     EquilateralTriangle     , DrawPathGeometryFromVertices 
                                                 [|
@@ -142,22 +158,30 @@ module internal Device =
                                                      -0.5F, +0.5F
                                                 |]
                 ] |> Map.ofList
-        
-        let Solid (c : ColorDescriptor) =  new Direct2D1.SolidColorBrush(d2dRenderTarget, c.ToColor4)                                    
 
-        let CreateBrush (bd : BrushDescriptor) : Direct2D1.Brush = 
-                match bd with
-                | Transparent       -> null
-                | SolidColor c      -> upcast Solid c
-            
+        let transformedGeometryCache = ConcurrentDictionary<ShapeDescriptor*Matrix3x2, Direct2D1.Geometry>()
+
+        let CreateTransformedGeometry (shape : ShapeDescriptor, transform : Matrix3x2) : Direct2D1.Geometry = 
+                upcast new TransformedGeometry(d2dFactory, geometryCache |> Map.find shape, transform)
+
+        override x.GetBrush (bd : BrushDescriptor, opacity : float32) : Direct2D1.Brush =
+            if opacity > 0.F then 
+                let b = brushCache.GetOrAdd(bd, CreateBrush)
+                b.Opacity <- opacity
+                b
+            else null
 
         member x.DirectWrite = directWrite
 
-        member x.GetBrush (bd : BrushDescriptor) : Direct2D1.Brush =
-            brushCache.GetOrAdd(bd, CreateBrush)
+        override x.GetTextFormat (tfd : TextFormatDescriptor) : DirectWrite.TextFormat =
+            x.DirectWrite.GetTextFormat tfd
 
-        member x.GetShape (shape : ShapeDescriptor) : Direct2D1.Geometry =
-            shapeCache |> Map.find shape
+        override x.GetGeometry (shape : ShapeDescriptor) : Direct2D1.Geometry =
+            geometryCache |> Map.find shape
+        
+        override x.GetTransformedGeometry (shape : ShapeDescriptor, transform : Matrix3x2) : Direct2D1.Geometry =
+            let g = transformedGeometryCache.GetOrAdd((shape, transform), CreateTransformedGeometry)
+            g
         
         member x.Width              = width
         member x.Height             = height

@@ -71,7 +71,8 @@ module public Visual =
         | Fork (l,r)            -> (HasVisuals l) && (HasVisuals r)
         | State (_,c)           -> HasVisuals c
 
-    // TODO: Add support for geometry realizations
+    // TODO: Figure out a way to faster lookups from descriptors ==> sharpdx primitives
+    // TODO: Add support for geometry realizations (when sharpdx supports it)
     // TODO: Add support for caching of subtrees
     
     let rec RenderTreeImpl

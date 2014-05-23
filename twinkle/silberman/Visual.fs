@@ -57,20 +57,20 @@ module public Visual =
         | Fork (l,r)        -> (HasVisuals l) && (HasVisuals r)
         | State (_,c)       -> HasVisuals c
 
-    // TODO: Use non-curry function for performance 
     // TODO: Add support for geometry realizations
     // TODO: Add support for caching of subtrees
     
-    let rec RenderTreeImpl 
-        (state      : ApplicationState                              ) 
-        (rt         : Direct2D1.RenderTarget                        ) 
-        (tfc        : TextFormatDescriptor->DirectWrite.TextFormat  ) 
-        (bc         : BrushDescriptor*float32->Direct2D1.Brush      ) 
-        (gc         : ShapeDescriptor->Direct2D1.Geometry           ) 
-        (transform  : Matrix3x2                                     ) 
-        (pixelScale : float32                                       )  
-        (vt         : VisualTree                                    ) 
-        = 
+    let rec RenderTreeImpl
+            ( 
+                state      : ApplicationState                              , 
+                rt         : Direct2D1.RenderTarget                        , 
+                tfc        : TextFormatDescriptor->DirectWrite.TextFormat  , 
+                bc         : BrushDescriptor*float32->Direct2D1.Brush      , 
+                gc         : ShapeDescriptor->Direct2D1.Geometry           , 
+                transform  : Matrix3x2                                     , 
+                pixelScale : float32                                       ,  
+                vt         : VisualTree                                    
+            ) = 
         match vt with 
         | NoVisual   -> ()
         | Rectangle (s,f,r,sw) ->
@@ -133,17 +133,17 @@ module public Visual =
           
                 rt.Transform <- fullTransform
 
-                RenderTreeImpl s rt tfc bc gc fullTransform pixelScale c
+                RenderTreeImpl (s, rt, tfc, bc, gc, fullTransform, pixelScale, c)
           
                 rt.Transform <- transform                 
         | Group (cs) ->
                 for branch in cs do
-                    RenderTreeImpl state rt tfc bc gc transform pixelScale branch 
+                    RenderTreeImpl (state, rt, tfc, bc, gc, transform, pixelScale, branch)
         | Fork (l,r) ->
-                RenderTreeImpl state rt tfc bc gc transform pixelScale l 
-                RenderTreeImpl state rt tfc bc gc transform pixelScale r
+                RenderTreeImpl (state, rt, tfc, bc, gc, transform, pixelScale, l) 
+                RenderTreeImpl (state, rt, tfc, bc, gc, transform, pixelScale, r)
         | State (_,c) ->
-                RenderTreeImpl state rt tfc bc gc transform pixelScale c
+                RenderTreeImpl (state, rt, tfc, bc, gc, transform, pixelScale, c)
 
     let RenderTree 
         (state      : ApplicationState                              ) 
@@ -153,7 +153,7 @@ module public Visual =
         (gc         : ShapeDescriptor->Direct2D1.Geometry           ) 
         (vt         : VisualTree                                    ) 
         = 
-        RenderTreeImpl state rt tfc bc gc Matrix3x2.Identity 1.0F vt
+        RenderTreeImpl (state, rt, tfc, bc, gc, Matrix3x2.Identity, 1.0F, vt)
 
 
 

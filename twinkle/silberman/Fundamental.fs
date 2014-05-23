@@ -12,22 +12,22 @@ module public Fundamental =
     
     let CurrentTime () : Time = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
 
-    [<StructuralEquality>]
-    [<StructuralComparison>]
+    [<Flags>]
     type MouseButtonStates = 
-        | Left
-        | Middle
-        | Right
+        | Empty     = 0x000
+        | Left      = 0x001
+        | Middle    = 0x002
+        | Right     = 0x004
 
     [<NoEquality>]
     [<NoComparison>]
     type MouseState = 
         {
-            ButtonState : Set<MouseButtonStates>
+            ButtonState : MouseButtonStates
             Coordinate  : Vector2
         }
         static member New bs c = {ButtonState = bs; Coordinate = c}
-        static member Zero = MouseState.New Set.empty <| Vector2()
+        static member Zero = MouseState.New MouseButtonStates.Empty <| Vector2()
 
         member x.Transform (t : Matrix3x2) = MouseState.New x.ButtonState <| t.TransformPoint x.Coordinate
 
@@ -445,4 +445,10 @@ module FundamentalAutoOpen =
         fun time -> let left    = l time
                     let right   = r time
                     Matrix3x2.Multiply (left, right)
+
+    type MouseButtonStates with
+        
+        member x.Union      (o : MouseButtonStates) = x ||| o
+        member x.Intersect  (o : MouseButtonStates) = x &&& o
+        member x.Difference (o : MouseButtonStates) = x &&& ~~~o
 

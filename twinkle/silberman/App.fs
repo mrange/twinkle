@@ -57,19 +57,20 @@ module public App =
 
         let mouseState          = ref <| MouseState.Zero
 
+        let hasButton (btn : MouseButtons) (mb : MouseButtons) = (btn &&& mb) = mb
+        let toMouseButtonStates (btn : MouseButtons) (mb : MouseButtons) (mbs : MouseButtonStates) = 
+            if (btn &&& mb) = mb then mbs
+            else MouseButtonStates.Empty
+
         let getButtonState (e : MouseEventArgs) =
             let btn = e.Button
+            
+            let mbs = 
+                    toMouseButtonStates btn MouseButtons.Left   MouseButtonStates.Left      |||
+                    toMouseButtonStates btn MouseButtons.Middle MouseButtonStates.Middle    |||
+                    toMouseButtonStates btn MouseButtons.Right  MouseButtonStates.Right
 
-            let hasButton (btn : MouseButtons) (mb : MouseButtons) =
-                    (btn &&& mb) = mb
-                    
-
-            [
-                if hasButton btn MouseButtons.Left      then yield MouseButtonStates.Left
-                if hasButton btn MouseButtons.Middle    then yield MouseButtonStates.Middle
-                if hasButton btn MouseButtons.Right     then yield MouseButtonStates.Right
-            ]
-            |> List.fold (fun s v -> s |> Set.add v) Set.empty
+            mbs
 
         let getCoordinate (e : MouseEventArgs) = 
                 Vector2(float32 e.X, float32 e.Y)
@@ -81,7 +82,7 @@ module public App =
                                     else
                                         let ms = !mouseState
                                         let bs = getButtonState e
-                                        let state = ms.ButtonState |> Set.difference bs
+                                        let state = ms.ButtonState.Difference  bs
                                         mouseState := MouseState.New state ms.Coordinate
                                     fromui.Enqueue (MouseChange !mouseState)
                                     )
@@ -91,7 +92,7 @@ module public App =
                                     else
                                         let ms = !mouseState
                                         let bs = getButtonState e
-                                        let state = ms.ButtonState |> Set.union bs
+                                        let state = ms.ButtonState.Union bs
                                         mouseState := MouseState.New state ms.Coordinate
                                     fromui.Enqueue (MouseChange !mouseState)
                                     )
@@ -124,17 +125,14 @@ module public App =
                     d2dRenderTarget.Clear(AsNullable <| Color.White.ToColor4())
 
                     let tfc        = d.DirectWrite.GetTextFormat
-                    let bc (bd, o) = let b = d.GetBrush bd
-                                     if b <> null then b.Opacity <- o
-                                     b
+                    let bc (bd, o) =    if o > 0.F then
+                                            let b = d.GetBrush bd
+                                            if b <> null then b.Opacity <- o
+                                            b
+                                        else null
                     let gc s       = d.GetShape s
 
                     let appState = ApplicationState.New (CurrentTime()) <| !mouseState 
-
-//                    let sc = SolidBrush Color.Black
-//                    let b = bc (sc,1.F)
-//
-//                    d2dRenderTarget.DrawRectangle(RectangleF(0.F, 0.F, 100.0F, 100.F), b)
 
                     Visual.RenderTree appState d2dRenderTarget tfc bc gc !vt
 

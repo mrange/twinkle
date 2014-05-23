@@ -263,7 +263,7 @@ module TwinkleGame =
                 let s = Animated.Brush.Transparent
                 let f (s : ApplicationState) = 
                     if rect.Contains s.CurrentMouse.Coordinate then
-                        let leftButtonPressed = s.CurrentMouse.ButtonState.Contains MouseButtonStates.Left
+                        let leftButtonPressed = s.CurrentMouse.ButtonState.HasFlag MouseButtonStates.Left
                         if v.LeftButtonPressed && not leftButtonPressed then
                             fromVisual.Enqueue <| CellClicked c
                         v.LeftButtonPressed <- leftButtonPressed
@@ -292,9 +292,9 @@ module TwinkleGame =
                 Matrix3x2.Translation (-100.F, -100.F)  
 //                Matrix3x2.Rotation -time                 
 
-            let random  = Random 19740531
+            let random  = Random ()
 
-            let board   = CreateBoard random 3<Columns> 3<Rows> |> ShakeBoard random
+            let board   = CreateBoard random 6<Columns> 6<Rows> |> ShakeBoard random
 
             let vt      =
                 let group = List<VisualTree>()

@@ -250,7 +250,7 @@ module TwinkleGame =
                     Violet  , SolidBrush Color.Violet
                 ] |> Map.ofList
 
-            let createVisualFacet (c : Cell) (x : int<X>) (y : int<Y>) (direction : Direction) =
+            let createVisualFacet (context : Foundation.ElementContext) (c : Cell) (x : int<X>) (y : int<Y>) (direction : Direction) =
                 let v = c.Visual
                 let s = stroke                      |> Animated.Brush.Opaque
                 let f = fills.[c.GetColor direction]|> Animated.Brush.Opaque
@@ -260,9 +260,10 @@ module TwinkleGame =
                     Matrix3x2.Scaling side             
 
                 let sw= 2.0F |> Animated.Constant
-                VisualTree.TransformedGeometry (Triangle45x45x90, s, f, ft, sw)
+                let key = context.CreateTransformedGeometry Triangle45x45x90 ft 
+                VisualTree.TransformedGeometry (key, s, f, sw)
 
-            let createVisualOverlay (c : Cell) =
+            let createVisualOverlay (context : Foundation.ElementContext) (c : Cell) =
                 let rect = RectangleF(-halfside, -halfside, side, side)
                 let v = c.Visual
                 let s = Animated.Brush.Transparent
@@ -281,7 +282,8 @@ module TwinkleGame =
                     Matrix3x2.Scaling side             
 
                 let sw= 2.0F |> Animated.Constant
-                VisualTree.TransformedGeometry (UnitSquare, s, f, ft, sw)
+                let key = context.CreateTransformedGeometry UnitSquare ft 
+                VisualTree.TransformedGeometry (key, s, f, sw)
 
             let transform (state : ApplicationState)    = 
                 Matrix3x2.Translation (side, side)
@@ -294,7 +296,7 @@ module TwinkleGame =
                             |> ShakeBoard random
                             |> UpdateVisual
 
-            let vt      =
+            let createVisual (context : Foundation.ElementContext) =
                 let outerGroup = List<VisualTree>()
                 board |> VisitCells (fun c x y -> 
                                         let innerGroup = List<VisualTree>()
@@ -310,11 +312,11 @@ module TwinkleGame =
                                             Matrix3x2.Translation (- halfside - side * float32 x, -halfside - side * float32 y)  *
                                             Matrix3x2.Rotation -r
 
-                                        innerGroup.Add <| createVisualFacet c x y Left
-                                        innerGroup.Add <| createVisualFacet c x y Up
-                                        innerGroup.Add <| createVisualFacet c x y Right
-                                        innerGroup.Add <| createVisualFacet c x y Down
-                                        innerGroup.Add <| createVisualOverlay c
+                                        innerGroup.Add <| createVisualFacet context c x y Left
+                                        innerGroup.Add <| createVisualFacet context c x y Up
+                                        innerGroup.Add <| createVisualFacet context c x y Right
+                                        innerGroup.Add <| createVisualFacet context c x y Down
+                                        innerGroup.Add <| createVisualOverlay context c
 
                                         let g = VisualTree.Group <| innerGroup.ToArray ()
                                         let t = VisualTree.Transform (t,rt, g)
@@ -344,19 +346,25 @@ module TwinkleGame =
                     return ()
                 }
 
+            let mutable visualTree = None
+
             do
                 x.SetEventHandler Events.Attached <| fun eh _ -> Async.StartImmediate gameLoop
                                                                  true
-                x.SetEventHandler Events.Detached <| fun eh _ -> true
-                
+                x.SetEventHandler Events.Detached <| fun eh _ -> visualTree <- None
+                                                                 true
 
             override x.OnMeasureContent a = 
                         Measurement.Fill
 
-
-
             override x.OnRenderContent  (o : Placement)
                                         (i : Placement) =
+                        let vt =    match visualTree with
+                                    | Some vt   ->  vt
+                                    | _         ->  let context = x.Context
+                                                    let vt = createVisual context.Value
+                                                    visualTree <- Some <| vt
+                                                    vt
                         VisualTree.Transform (transform, rtransform, vt)
 
     let Game (pvs : Foundation.PropertyValue list) = Logical.CreateElement<Elements.GameElement> pvs

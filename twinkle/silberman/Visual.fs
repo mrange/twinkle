@@ -28,22 +28,21 @@ module public Visual =
                                     Point1      : AnimatedVector2       *
                                     Brush       : AnimatedBrush         *
                                     StrokeWidth : AnimatedFloat
-        | Geometry              of  Shape       : GeometryDescriptor    *
+        | Geometry              of  Shape       : GeometryKey           *
                                     Stroke      : AnimatedBrush         *
                                     Fill        : AnimatedBrush         *
                                     Transform   : AnimatedMatrix        *
                                     StrokeWidth : AnimatedFloat
-        | TransformedGeometry   of  Shape       : GeometryDescriptor    *
+        | TransformedGeometry   of  Shape       : TransformedGeometryKey*
                                     Stroke      : AnimatedBrush         *
                                     Fill        : AnimatedBrush         *
-                                    Transform   : Matrix3x2             *
                                     StrokeWidth : AnimatedFloat
-        | RealizedGeometry      of  Shape       : GeometryDescriptor    *
-                                    Stroke      : AnimatedBrush         *
-                                    Fill        : AnimatedBrush         *
-                                    Transform   : Matrix3x2             *
-                                    StrokeWidth : float32               *
-                                    MaxZoom     : float32
+//        | RealizedGeometry      of  Shape       : GeometryDescriptor    *
+//                                    Stroke      : AnimatedBrush         *
+//                                    Fill        : AnimatedBrush         *
+//                                    Transform   : Matrix3x2             *
+//                                    StrokeWidth : float32               *
+//                                    MaxZoom     : float32
         | Text                  of  Text        : string                *
                                     TextFormat  : TextFormatDescriptor  *
                                     LayoutRect  : AnimatedRectangleF    *
@@ -64,17 +63,12 @@ module public Visual =
         | Line _                -> true
         | Geometry _            -> true
         | TransformedGeometry _ -> true
-        | RealizedGeometry _    -> true
         | Text _                -> true
         | Transform (t,r,c)     -> HasVisuals c
         | Group cs              -> (cs |> Array.tryFindIndex (fun c -> HasVisuals c)).IsSome
         | Fork (l,r)            -> (HasVisuals l) && (HasVisuals r)
         | State (_,c)           -> HasVisuals c
 
-    // TODO: Figure out a way to faster lookups from descriptors ==> sharpdx primitives
-    // TODO: Add support for geometry realizations (when sharpdx supports it)
-    // TODO: Add support for caching of subtrees
-    
     let rec private RenderTreeImpl
             ( 
                 state       : ApplicationState                              , 
@@ -125,12 +119,12 @@ module public Visual =
                 if bstroke <> null && strokeWidth > 0.F then rt.DrawGeometry (gshape, bstroke, strokeWidth)
 
                 rt.Transform        <- transform
-        | TransformedGeometry (shape,s,f,t,sw) ->
+        | TransformedGeometry (shape,s,f,sw) ->
                 let strokeWidth = sw state
                 let fill        = f state
                 let stroke      = s state
 
-                let gshape      = d.GetTransformedGeometry (shape,t)
+                let gshape      = d.GetTransformedGeometry shape
           
                 let bfill       = d.GetBrush fill
                 let bstroke     = d.GetBrush stroke

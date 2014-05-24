@@ -1,9 +1,5 @@
 ﻿open silberman
 
-// TODO: 
-// 1. Use units to avoid mixing up floats representing different concepts
-// 2. Make sure SharpDX isn't implicitly exported in the interface
-
 open Fundamental
 
 open Logical

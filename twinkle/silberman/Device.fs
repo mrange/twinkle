@@ -2,8 +2,10 @@
 
 open System
 open System.Collections.Generic
+open System.Collections.Concurrent
 open System.Diagnostics
 open System.Linq
+open System.Threading
 
 open SharpDX
 open SharpDX.Direct2D1
@@ -11,6 +13,41 @@ open SharpDX.Direct2D1
 open Fundamental
 
 module public Device = 
+
+    type internal SharedResources =
+        {
+            Key                     : int ref
+            Brushes                 : ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           >
+            TextFormats             : ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    >
+            Geometries              : ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        >
+            TransformedGeometries   : ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref >
+        }
+        static member New () = 
+                {
+                    Key                     = ref 0
+                    Brushes                 = ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           > ()
+                    TextFormats             = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    > ()
+                    Geometries              = ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        > ()
+                    TransformedGeometries   = ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref > ()
+                }
+        member x.GenerateKey () = Interlocked.Increment x.Key
+        member x.CreateBrush                 (bd : BrushDescriptor)         : BrushKey      = 
+                let key = x.GenerateKey ()
+                x.Brushes.[key] <- (bd, ref null)
+                key
+        member x.CreateTextFormat            (tfd : TextFormatDescriptor)   : TextFormatKey = 
+                let key = x.GenerateKey ()
+                x.TextFormats.[key] <- (tfd, ref null)
+                key
+        member x.CreateGeometry              (gd : GeometryDescriptor)      : GeometryKey   = 
+                let key = x.GenerateKey ()
+                x.Geometries.[key] <- (gd, ref null)
+                key
+        member x.CreateTransformedGeometry   (gd : GeometryDescriptor) (m : Matrix3x2) : GeometryKey =
+                let key = x.GenerateKey ()
+                x.TransformedGeometries.[key] <- (gd, m, ref null)
+                key
+
     
     type internal DirectWrite () = 
         let dwFactory           = new DirectWrite.Factory (DirectWrite.FactoryType.Shared)
@@ -39,11 +76,11 @@ module public Device =
     type internal GenericDevice() =
         abstract member GetBrush                : BrushDescriptor*float32       -> Direct2D1.Brush
         abstract member GetTextFormat           : TextFormatDescriptor          -> DirectWrite.TextFormat
-        abstract member GetGeometry             : GeometryDescriptor            -> Direct2D1.Geometry
-        abstract member GetTransformedGeometry  : GeometryDescriptor*Matrix3x2  -> Direct2D1.Geometry
+        abstract member GetGeometry             : GeometryKey                   -> Direct2D1.Geometry
+        abstract member GetTransformedGeometry  : TransformedGeometryKey        -> Direct2D1.TransformedGeometry
         
 
-    type internal WindowedDevice(form : Windows.RenderForm) = 
+    type internal WindowedDevice(form : Windows.RenderForm, sharedResources : SharedResources) = 
 
         inherit GenericDevice()
 
@@ -162,10 +199,10 @@ module public Device =
                                                 |]
                 ] |> ToDictionary
 
-        let transformedGeometryCache = Dictionary<GeometryDescriptor*Matrix3x2, Direct2D1.Geometry>()
+        let transformedGeometryCache = Dictionary<GeometryDescriptor*Matrix3x2, Direct2D1.TransformedGeometry>()
 
-        let CreateTransformedGeometry (shape : GeometryDescriptor, transform : Matrix3x2) : Direct2D1.Geometry = 
-                upcast new TransformedGeometry(d2dFactory, geometryCache.[shape], transform)
+        let CreateTransformedGeometry (shape : GeometryDescriptor, transform : Matrix3x2) : Direct2D1.TransformedGeometry = 
+                new TransformedGeometry(d2dFactory, geometryCache.[shape], transform)
 
         override x.GetBrush (bd : BrushDescriptor, opacity : float32) : Direct2D1.Brush =
             if opacity > 0.F then 
@@ -174,17 +211,31 @@ module public Device =
                 b
             else null
 
-        member x.DirectWrite = directWrite
+        member x.SharedResources    = sharedResources
+
+        member x.DirectWrite        = directWrite
 
         override x.GetTextFormat (tfd : TextFormatDescriptor) : DirectWrite.TextFormat =
             x.DirectWrite.GetTextFormat tfd
 
-        override x.GetGeometry (shape : GeometryDescriptor) : Direct2D1.Geometry =
-            geometryCache.[shape]
+        override x.GetGeometry (key : GeometryKey) : Direct2D1.Geometry =
+            let find = sharedResources.Geometries.Find key
+            match find with
+            | Some (geometryDescriptor, geometry) when !geometry <> null -> !geometry
+            | Some (geometryDescriptor, geometry) -> 
+                geometry := geometryCache.[geometryDescriptor]
+                !geometry
+            | _ -> null
+            
         
-        override x.GetTransformedGeometry (shape : GeometryDescriptor, transform : Matrix3x2) : Direct2D1.Geometry =
-            let g = transformedGeometryCache.GetOrAdd((shape, transform), CreateTransformedGeometry)
-            g
+        override x.GetTransformedGeometry (key : TransformedGeometryKey) : Direct2D1.TransformedGeometry =
+            let find = sharedResources.TransformedGeometries.Find key
+            match find with
+            | Some (geometryDescriptor, t, geometry) when !geometry <> null -> !geometry
+            | Some (geometryDescriptor, t, geometry) -> 
+                geometry := transformedGeometryCache.GetOrAdd((geometryDescriptor, t), CreateTransformedGeometry)
+                !geometry
+            | _ -> null
         
         member x.Width              = width
         member x.Height             = height

@@ -46,7 +46,7 @@ module public Logical =
                 CreateBrush                 : BrushDescriptor       -> BrushKey
                 CreateTextFormat            : TextFormatDescriptor  -> TextFormatKey
                 CreateGeometry              : GeometryDescriptor    -> GeometryKey
-                CreateTransformedGeometry   : GeometryDescriptor    -> Matrix3x2 -> GeometryKey
+                CreateTransformedGeometry   : GeometryDescriptor    -> Matrix3x2 -> TransformedGeometryKey
                 MeasureText                 : TextFormatDescriptor  -> Size2F -> string -> Size2F
             }
             static member New cb ctf cg ctg mt = 
@@ -419,7 +419,6 @@ module public Logical =
                                 | Some pp   -> pp.InvalidateMeasurement ()
                                 ignore <| x.RaiseEvent attached ()
 
-            // TODO: Make sure to detach full tree on shutdown
             member internal x.ClearParent () =
                                 match parent with
                                 | None      -> ()

@@ -29,40 +29,6 @@ module public App =
         | MouseChange   of MouseState
         | ShutDownApplication  
 
-    type private SharedResources =
-        {
-            Key                     : int ref
-            Brushes                 : ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           >
-            TextFormats             : ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    >
-            Geometries              : ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        >
-            TransformedGeometries   : ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref >
-        }
-        static member New () = 
-                {
-                    Key                     = ref 0
-                    Brushes                 = ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           > ()
-                    TextFormats             = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    > ()
-                    Geometries              = ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        > ()
-                    TransformedGeometries   = ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref > ()
-                }
-        member x.GenerateKey () = Interlocked.Increment x.Key
-        member x.CreateBrush                 (bd : BrushDescriptor)         : BrushKey      = 
-                let key = x.GenerateKey ()
-                x.Brushes.[key] <- (bd, ref null)
-                key
-        member x.CreateTextFormat            (tfd : TextFormatDescriptor)   : TextFormatKey = 
-                let key = x.GenerateKey ()
-                x.TextFormats.[key] <- (tfd, ref null)
-                key
-        member x.CreateGeometry              (gd : GeometryDescriptor)      : GeometryKey   = 
-                let key = x.GenerateKey ()
-                x.Geometries.[key] <- (gd, ref null)
-                key
-        member x.CreateTransformedGeometry   (gd : GeometryDescriptor) (m : Matrix3x2) : GeometryKey =
-                let key = x.GenerateKey ()
-                x.TransformedGeometries.[key] <- (gd, m, ref null)
-                key
-
     let private ShowForm 
         (title      : string                                    ) 
         (width      : float32                                   )
@@ -79,11 +45,11 @@ module public App =
 
         form.ClientSize         <- System.Drawing.Size(int width,int height)
 
-        let device              = ref <| new WindowedDevice(form)
+        let device              = ref <| new WindowedDevice(form, shared)
 
         let disposeDevice ()    = TryDispose !device
         let recreateDevice ()   = disposeDevice ()
-                                  device := new WindowedDevice(form)
+                                  device := new WindowedDevice(form, shared)
                                   let d = !device
                                   ignore <| fromui.Enqueue (Resized (d.Width, d.Height))
                                   
@@ -214,7 +180,7 @@ module public App =
                                     sharedResources.CreateTransformedGeometry
                                     directWrite.EstimateTextSize
 
-            let document = Logical.Standard.DocumentElement (elementContext)
+            let document = Logical.Standard.DocumentElement elementContext
 
             document.Set Properties.Child <| Some body
 

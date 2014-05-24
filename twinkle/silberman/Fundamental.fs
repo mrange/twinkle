@@ -8,7 +8,14 @@ open System.Threading
 
 module public Fundamental = 
 
-    type Time = float32
+//    [<Measure>]
+//    type Columns
+
+    type BrushKey               = int
+    type TextFormatKey          = int
+    type GeometryKey            = int
+    type TransformedGeometryKey = int
+    type Time                   = float32
     
     let CurrentTime () : Time = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
 
@@ -78,7 +85,7 @@ module public Fundamental =
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type ShapeDescriptor        =
+    type GeometryDescriptor     =
         | EquilateralTriangle
         | Triangle45x45x90
         | UnitSquare
@@ -418,6 +425,7 @@ module public Fundamental =
                             cont <- Monitor.Wait(safe,waitFor)
                         else
                             cont <- false
+
 
                 result
             finally

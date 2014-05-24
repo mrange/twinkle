@@ -29,13 +29,48 @@ module public App =
         | MouseChange   of MouseState
         | ShutDownApplication  
 
+    type private SharedResources =
+        {
+            Key                     : int ref
+            Brushes                 : ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           >
+            TextFormats             : ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    >
+            Geometries              : ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        >
+            TransformedGeometries   : ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref >
+        }
+        static member New () = 
+                {
+                    Key                     = ref 0
+                    Brushes                 = ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           > ()
+                    TextFormats             = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    > ()
+                    Geometries              = ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        > ()
+                    TransformedGeometries   = ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref > ()
+                }
+        member x.GenerateKey () = Interlocked.Increment x.Key
+        member x.CreateBrush                 (bd : BrushDescriptor)         : BrushKey      = 
+                let key = x.GenerateKey ()
+                x.Brushes.[key] <- (bd, ref null)
+                key
+        member x.CreateTextFormat            (tfd : TextFormatDescriptor)   : TextFormatKey = 
+                let key = x.GenerateKey ()
+                x.TextFormats.[key] <- (tfd, ref null)
+                key
+        member x.CreateGeometry              (gd : GeometryDescriptor)      : GeometryKey   = 
+                let key = x.GenerateKey ()
+                x.Geometries.[key] <- (gd, ref null)
+                key
+        member x.CreateTransformedGeometry   (gd : GeometryDescriptor) (m : Matrix3x2) : GeometryKey =
+                let key = x.GenerateKey ()
+                x.TransformedGeometries.[key] <- (gd, m, ref null)
+                key
+
     let private ShowForm 
-        (title  : string                                    ) 
-        (width  : float32                                   )
-        (height : float32                                   ) 
-        (ct     : CancellationToken                         )
-        (toui   : ConcurrentQueue<ToUIMessage>              )
-        (fromui : BlockingQueue<FromUIMessage>              )
+        (title      : string                                    ) 
+        (width      : float32                                   )
+        (height     : float32                                   ) 
+        (ct         : CancellationToken                         )
+        (toui       : ConcurrentQueue<ToUIMessage>              )
+        (fromui     : BlockingQueue<FromUIMessage>              )
+        (shared     : SharedResources                           )
         =
 
         use onExitShutDown      = OnExit <| fun () -> ignore (fromui.Enqueue ShutDownApplication)
@@ -148,10 +183,10 @@ module public App =
         (height : int   )
         (body   : Logical.Foundation.Element) = 
         
-        let formProcessor ct toui fromui = async {
+        let formProcessor ct toui fromui sharedResources = async {
                 do! Async.SwitchToThread2 ApartmentState.STA ThreadPriority.AboveNormal
 
-                ShowForm title (float32 width) (float32 height) ct toui fromui
+                ShowForm title (float32 width) (float32 height) ct toui fromui sharedResources
 
                 return ()
             }
@@ -164,15 +199,22 @@ module public App =
 
             let! ct = Async.CancellationToken
 
-            Async.StartImmediate <| formProcessor ct toui fromui
+            let sharedResources = SharedResources.New ()
+
+            Async.StartImmediate <| formProcessor ct toui fromui sharedResources
 
             let nextRebuild = ref <| CurrentTime () + 0.1F
 
             let cont = ref true
 
-            let context = Logical.Foundation.ElementContext.New directWrite.EstimateTextSize
+            let elementContext  = Logical.Foundation.ElementContext.New 
+                                    sharedResources.CreateBrush
+                                    sharedResources.CreateTextFormat
+                                    sharedResources.CreateGeometry
+                                    sharedResources.CreateTransformedGeometry
+                                    directWrite.EstimateTextSize
 
-            let document = Logical.Standard.DocumentElement(context)
+            let document = Logical.Standard.DocumentElement (elementContext)
 
             document.Set Properties.Child <| Some body
 

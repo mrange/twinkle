@@ -168,7 +168,27 @@ module internal UtilsAutoOpen =
                     let v = RefOf<'TValue>
                     if x.TryGetValue(key, v) then Some !v
                     else None
+
+        member x.GetOrAdd (key : 'TKey, creator : 'TKey -> 'TValue) = 
+                    let v = RefOf<'TValue>
+                    if x.TryGetValue(key, v) then !v
+                    else
+                        v := creator key
+                        x.Add (key, !v)
+                        !v
+
+    let ToDictionary (l : seq<'TKey*'TValue>) = 
+        let d = Dictionary<'TKey, 'TValue> ()
+        for k,v in l do
+            d.[k] <- v
+        d
                                                 
+    let ToConcurrentDictionary (l : seq<'TKey*'TValue>) = 
+        let d = ConcurrentDictionary<'TKey, 'TValue> ()
+        for k,v in l do
+            ignore <| d.TryAdd (k,v)
+        d
+
 module internal Async = 
     let SwitchToThread2 (state : ApartmentState) (tp : ThreadPriority): Async<unit> = 
         Async.FromContinuations <| fun (cont, econt, ccont) -> 

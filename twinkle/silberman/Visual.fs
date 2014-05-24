@@ -28,17 +28,17 @@ module public Visual =
                                     Point1      : AnimatedVector2       *
                                     Brush       : AnimatedBrush         *
                                     StrokeWidth : AnimatedFloat
-        | Geometry              of  Shape       : ShapeDescriptor       *
+        | Geometry              of  Shape       : GeometryDescriptor    *
                                     Stroke      : AnimatedBrush         *
                                     Fill        : AnimatedBrush         *
                                     Transform   : AnimatedMatrix        *
                                     StrokeWidth : AnimatedFloat
-        | TransformedGeometry   of  Shape       : ShapeDescriptor       *
+        | TransformedGeometry   of  Shape       : GeometryDescriptor    *
                                     Stroke      : AnimatedBrush         *
                                     Fill        : AnimatedBrush         *
                                     Transform   : Matrix3x2             *
                                     StrokeWidth : AnimatedFloat
-        | RealizedGeometry      of  Shape       : ShapeDescriptor       *
+        | RealizedGeometry      of  Shape       : GeometryDescriptor    *
                                     Stroke      : AnimatedBrush         *
                                     Fill        : AnimatedBrush         *
                                     Transform   : Matrix3x2             *
@@ -57,7 +57,7 @@ module public Visual =
         | State                 of  State       : obj                   *
                                     Child       : VisualTree
          
-    let rec HasVisuals (vt : VisualTree) =
+    let rec internal HasVisuals (vt : VisualTree) =
         match vt with
         | NoVisual              -> false
         | Rectangle _           -> true
@@ -75,7 +75,7 @@ module public Visual =
     // TODO: Add support for geometry realizations (when sharpdx supports it)
     // TODO: Add support for caching of subtrees
     
-    let rec RenderTreeImpl
+    let rec private RenderTreeImpl
             ( 
                 state       : ApplicationState                              , 
                 rt          : Direct2D1.RenderTarget                        ,
@@ -171,7 +171,7 @@ module public Visual =
         | State (_,c) ->                   
                 RenderTreeImpl (state, rt, d, transform, pixelScale, c)
 
-    let RenderTree 
+    let internal RenderTree 
         (state      : ApplicationState                              ) 
         (rt         : Direct2D1.RenderTarget                        ) 
         (d          : GenericDevice                                 )

@@ -43,9 +43,20 @@ module public Logical =
         [<ReferenceEquality>]
         type ElementContext = 
             {
-                MeasureText : TextFormatDescriptor -> Size2F -> string -> Size2F
+                CreateBrush                 : BrushDescriptor       -> BrushKey
+                CreateTextFormat            : TextFormatDescriptor  -> TextFormatKey
+                CreateGeometry              : GeometryDescriptor    -> GeometryKey
+                CreateTransformedGeometry   : GeometryDescriptor    -> Matrix3x2 -> GeometryKey
+                MeasureText                 : TextFormatDescriptor  -> Size2F -> string -> Size2F
             }
-            static member New mt = {MeasureText = mt}
+            static member New cb ctf cg ctg mt = 
+                            {
+                                CreateBrush                 = cb
+                                CreateTextFormat            = ctf
+                                CreateGeometry              = cg
+                                CreateTransformedGeometry   = ctg
+                                MeasureText                 = mt
+                            }
 
         type TypeDictionary<'T>() =
 

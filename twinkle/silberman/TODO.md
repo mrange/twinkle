@@ -1,11 +1,10 @@
 ﻿TODO:
 =====
 
-NEXT: 8
+NEXT: 9
 
 Working on
 ----------
-3. Figure out a way to faster lookups from descriptors ==> sharpdx primitives
 
 Bugs
 ----
@@ -14,6 +13,7 @@ Bugs
 
 Features
 --------
+9. Work on the randomization algorithm so that the border squares are less obvious
 4. Add support for geometry realizations (when sharpdx supports it)
 5. Add support for caching of subtrees
 6. Use units to avoid mixing up floats representing different concepts
@@ -25,3 +25,4 @@ Fixed Bugs
 
 Added Features
 --------------
+3. Figure out a way to faster lookups from descriptors ==> sharpdx primitives

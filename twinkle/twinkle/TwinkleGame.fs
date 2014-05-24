@@ -305,7 +305,7 @@ module TwinkleGame =
 
             let random  = Random ()
 
-            let board   =   CreateBoard random 5<Columns> 5<Rows>
+            let board   =   CreateBoard random 8<Columns> 8<Rows>
                             |> ShakeBoard random
                             |> UpdateVisual
 

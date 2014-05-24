@@ -250,14 +250,14 @@ module TwinkleGame =
                     Violet  , SolidBrush Color.Violet
                 ]
 
-            let createVisualFacet 
-                (context    : Foundation.ElementContext ) 
-                (strokeKey  : BrushKey                  ) 
-                (overlayKey : BrushKey                  ) 
+            let createVisualFacet
+                (context    : Foundation.ElementContext )
+                (strokeKey  : BrushKey                  )
+                (overlayKey : BrushKey                  )
                 (fillKeys   : Map<TwinkleColor, BrushKey>   )
-                (c          : Cell                      ) 
-                (x          : int<X>                    ) 
-                (y          : int<Y>                    ) 
+                (c          : Cell                      )
+                (x          : int<X>                    )
+                (y          : int<Y>                    )
                 (direction  : Direction                 ) =
                 let v = c.Visual
                 let s = strokeKey                       |> Animated.Brush.Opaque
@@ -271,10 +271,10 @@ module TwinkleGame =
                 let key = context.CreateTransformedGeometry Triangle45x45x90 ft
                 VisualTree.TransformedGeometry (key, s, f, sw)
 
-            let createVisualOverlay 
-                (context    : Foundation.ElementContext ) 
-                (strokeKey  : BrushKey                  ) 
-                (overlayKey : BrushKey                  ) 
+            let createVisualOverlay
+                (context    : Foundation.ElementContext )
+                (strokeKey  : BrushKey                  )
+                (overlayKey : BrushKey                  )
                 (fillKeys   : Map<TwinkleColor, BrushKey>   )
                 (c          : Cell                      ) =
                 let rect = RectangleF(-halfside, -halfside, side, side)
@@ -309,10 +309,10 @@ module TwinkleGame =
                             |> ShakeBoard random
                             |> UpdateVisual
 
-            let createVisual 
-                (context    : Foundation.ElementContext     ) 
-                (strokeKey  : BrushKey                      ) 
-                (overlayKey : BrushKey                      ) 
+            let createVisual
+                (context    : Foundation.ElementContext     )
+                (strokeKey  : BrushKey                      )
+                (overlayKey : BrushKey                      )
                 (fillKeys   : Map<TwinkleColor, BrushKey>   )
                 =
                 let outerGroup = List<VisualTree>()
@@ -330,9 +330,9 @@ module TwinkleGame =
                                             Matrix3x2.Translation (- halfside - side * float32 x, -halfside - side * float32 y)  *
                                             Matrix3x2.Rotation -r
 
-                                        let facet = createVisualFacet context strokeKey overlayKey fillKeys c x y 
+                                        let facet = createVisualFacet context strokeKey overlayKey fillKeys c x y
 
-                                        innerGroup.Add <| facet Left 
+                                        innerGroup.Add <| facet Left
                                         innerGroup.Add <| facet Up
                                         innerGroup.Add <| facet Right
                                         innerGroup.Add <| facet Down
@@ -381,10 +381,10 @@ module TwinkleGame =
                                         (i : Placement) =
                         let vt =    match visualTree, x.Context with
                                     | Some vt,_         ->  vt
-                                    | _, Some context   ->  
+                                    | _, Some context   ->
                                         let strokeKey   =   context.CreateBrush stroke
                                         let overlayKey  =   context.CreateBrush overlay
-                                        let fillKeys    =   fills 
+                                        let fillKeys    =   fills
                                                             |> List.map (fun (k,v) -> k,context.CreateBrush v)
                                                             |> Map.ofList
 

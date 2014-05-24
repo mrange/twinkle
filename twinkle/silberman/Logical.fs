@@ -208,14 +208,14 @@ module public Logical =
             static let __InvalidateTextFormatKey    (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateTextFormatKey ()
             static let __InvalidateBrushKey      bk (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateBrushKey bk
 
-            static let brushCreator 
-                (brushCreator   : string -> PropertyValueChanged<BrushDescriptor> -> PropertyDefaultValue<BrushDescriptor> -> PersistentProperty<BrushDescriptor>   ) 
-                (keyCreator     : string -> PropertyValueChanged<BrushKey> -> PropertyDefaultValue<BrushKey> -> PersistentProperty<BrushKey>                        ) 
+            static let brushCreator
+                (brushCreator   : string -> PropertyValueChanged<BrushDescriptor> -> PropertyDefaultValue<BrushDescriptor> -> PersistentProperty<BrushDescriptor>   )
+                (keyCreator     : string -> PropertyValueChanged<BrushKey> -> PropertyDefaultValue<BrushKey> -> PersistentProperty<BrushKey>                        )
                 (id             : string                                                                                                                            )
                 (brushDescriptor : BrushDescriptor                                                                                                                  ) =
                 let rec brush   = brushCreator id         (__InvalidateBrushKey brushKey)   <| Value brushDescriptor
-                and brushKey    = keyCreator (id+"Key") __InvalidateVisual                  <| ValueCreator 
-                                                                                                (fun e -> 
+                and brushKey    = keyCreator (id+"Key") __InvalidateVisual                  <| ValueCreator
+                                                                                                (fun e ->
                                                                                                     let context = e.Context
                                                                                                     let brush   = e.Get brush
                                                                                                     match context with
@@ -247,8 +247,8 @@ module public Logical =
 
             static let fontFamily                   = Persistent "FontFamily"      __InvalidateTextFormatKey<| Value "Calibri"
             static let fontSize                     = Persistent "FontSize"        __InvalidateTextFormatKey<| Value 24.F
-            static let textFormatKey                = Persistent "TextFormatKey"   __InvalidateMeasurement  <| ValueCreator 
-                                                                                                                (fun e -> 
+            static let textFormatKey                = Persistent "TextFormatKey"   __InvalidateMeasurement  <| ValueCreator
+                                                                                                                (fun e ->
                                                                                                                     let context     = e.Context
                                                                                                                     let fontFamily  = e.Get fontFamily
                                                                                                                     let fontSize    = e.Get fontSize
@@ -828,9 +828,9 @@ module public Logical =
 
             static let borderThickness          = Persistent    "BorderThickness"   InvalidateMeasurement   <| Value 2.0F
 
-            static let highlight, highlightKey  = Brush         "Highlight"         <| SolidBrush Color.Purple       
-            static let pressed, pressedKey      = Brush         "Pressed"           <| SolidBrush Color.LightBlue   
-            static let border, borderKey        = Brush         "Border"            <| SolidBrush Color.White       
+            static let highlight, highlightKey  = Brush         "Highlight"         <| SolidBrush Color.Purple
+            static let pressed, pressedKey      = Brush         "Pressed"           <| SolidBrush Color.LightBlue
+            static let border, borderKey        = Brush         "Border"            <| SolidBrush Color.White
 
             static let clicked                  = Routed        "Clicked"          ()
 

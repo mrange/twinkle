@@ -25,14 +25,14 @@ module internal Device =
         member x.GetTextFormatKey (key : TextFormatKey) (tfd : TextFormatDescriptor) : TextFormatKey =
             if textFormats.ContainsKey key then key
             else
-                let tf = x.CreateTextFormat tfd 
+                let tf = x.CreateTextFormat tfd
                 textFormats.Add(key, tf)
                 key
 
         member x.EstimateTextSize (key : TextFormatKey) (sz : Size2F) (text : string) =
             let tf = textFormats.Find key
             match tf with
-            | Some tf -> 
+            | Some tf ->
                 use tl = new DirectWrite.TextLayout(dwFactory, text, tf, sz.Width, sz.Height)
                 let m = tl.Metrics
                 Size2F (m.Width, m.Height)
@@ -59,26 +59,26 @@ module internal Device =
 
         let generateKey () = Interlocked.Increment key
 
-        let getKey 
-            (resources  : ConcurrentDictionary<int, 'D*'V ref>  ) 
-            (keys       : ConcurrentDictionary<'D, int>         ) 
+        let getKey
+            (resources  : ConcurrentDictionary<int, 'D*'V ref>  )
+            (keys       : ConcurrentDictionary<'D, int>         )
             (d          : 'D                                    )
             : int =
 
             match keys.Find d with
             | Some key  ->  key
-            | _         ->  
+            | _         ->
                 let rec insertKey () =
                     let key = generateKey ()
                     let r   = keys.TryAdd (d, key)
-                    if r then 
+                    if r then
                         let ir = resources.TryAdd (key, (d, ref null))
                         if ir then key
                         else failwith "Failed to insert new key into resource dictionary, as a new key is unique this is shouldn't happen"
-                    else insertKey () 
+                    else insertKey ()
                 insertKey ()
 
-        let freeResources (resources  : ConcurrentDictionary<int, 'D*'V ref>  ) = 
+        let freeResources (resources  : ConcurrentDictionary<int, 'D*'V ref>  ) =
             for kv in resources do
                 let d,r = kv.Value
                 let resource = !r
@@ -98,7 +98,7 @@ module internal Device =
         member x.Device_TransformedGeometries   = transformedGeometries
 
         member x.GetBrush                 (bd : BrushDescriptor)        : BrushKey      =
-                getKey brushes brushDescriptors bd 
+                getKey brushes brushDescriptors bd
 
         member x.GetTextFormat            (tfd : TextFormatDescriptor)  : TextFormatKey =
                 getKey textFormats textFormatDescriptors tfd
@@ -237,7 +237,7 @@ module internal Device =
 
         override x.GetBrush (key : BrushKey, opacity : float32) : Direct2D1.Brush =
             let find = sharedResources.Device_Brushes.Find key
-            let brush = 
+            let brush =
                 match find with
                 | Some (_, brush) when !brush <> null -> !brush
                 | Some (brushDescriptor, brush) ->

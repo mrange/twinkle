@@ -13,7 +13,7 @@ open System.Windows.Forms
 module internal UtilsAutoOpen =
 
     let private globalId= ref 1
-    
+
     let GenerateId ()   = Interlocked.Increment globalId
 
     let GlobalClock     = let sw = new Stopwatch ()

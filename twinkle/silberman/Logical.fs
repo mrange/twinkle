@@ -58,60 +58,6 @@ module public Logical =
                                 MeasureText                 = mt
                             }
 
-        type TypeDictionary<'T>() =
-
-            let safe     = obj()
-            let explicit = ConcurrentDictionary<Type,'T>()
-            let implicit = ConcurrentDictionary<Type,'T option>()
-
-            member x.Add k v =
-                lock safe <| fun () ->
-                                if explicit.TryAdd(k,v) then
-                                    implicit.Clear ()
-                                else
-                                    ()
-
-            member x.Replace k (v : 'T) =
-                lock safe <| fun () ->
-                                ignore <| explicit.AddOrUpdate(k,v,(fun _ _ -> v))
-                                implicit.Clear ()
-
-            member x.Remove k v =
-                lock safe <| fun () ->
-                                if explicit.TryRemove(k,v) then
-                                    implicit.Clear ()
-                                else
-                                    ()
-
-            member x.Clear () =
-                lock safe <| fun () ->
-                                explicit.Clear ()
-                                implicit.Clear ()
-
-            member private x.TryFindBase_NoLock (k : Type) =
-                let v = RefOf<'T>
-                let found = explicit.TryGetValue(k, v)
-                if found then
-                    let r = Some !v
-                    ignore <| implicit.TryAdd(k,r)
-                    r
-                else
-                    let b = k.BaseType
-                    if b = null then None
-                    else
-                        let r = x.TryFindBase_NoLock b
-                        ignore <| implicit.TryAdd(k,r)
-                        r
-
-
-            member x.TryFind k =
-                let v : 'T option ref = ref None
-                if implicit.TryGetValue(k, v) then
-                    !v
-                else
-                    lock safe <| fun () -> x.TryFindBase_NoLock k
-
-
         type PropertyType =
                 | Computed
                 | Persistent

@@ -12,93 +12,121 @@ open SharpDX.Direct2D1
 
 open Fundamental
 
-module public Device = 
+module internal Device =
 
-    type internal SharedResources =
-        {
-            Key                     : int ref
-            Brushes                 : ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           >
-            TextFormats             : ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    >
-            Geometries              : ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        >
-            TransformedGeometries   : ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref >
-        }
-
-        interface IDisposable with
-            member x.Dispose () = 
-                let brushes                 = x.Brushes.ToArray ()
-                let textFormats             = x.TextFormats.ToArray ()
-                let geometries              = x.Geometries.ToArray ()
-                let transformedGeometries   = x.TransformedGeometries.ToArray ()
-
-                x.Brushes.Clear ()
-                x.TextFormats.Clear ()
-                x.Geometries.Clear ()
-                x.TransformedGeometries.Clear ()                
-        
-                brushes                 |> Seq.map (fun kv -> let _,b = kv.Value in !b)     |> TryDisposeSequence
-                textFormats             |> Seq.map (fun kv -> let _,tf = kv.Value in !tf)   |> TryDisposeSequence
-                geometries              |> Seq.map (fun kv -> let _,g = kv.Value in !g)     |> TryDisposeSequence
-                transformedGeometries   |> Seq.map (fun kv -> let _,_,tg = kv.Value in !tg) |> TryDisposeSequence
-         
-        static member New () = 
-                {
-                    Key                     = ref 0
-                    Brushes                 = ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           > ()
-                    TextFormats             = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    > ()
-                    Geometries              = ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        > ()
-                    TransformedGeometries   = ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref > ()
-                }
-        member x.GenerateKey () = Interlocked.Increment x.Key
-        member x.CreateBrush                 (bd : BrushDescriptor)         : BrushKey      = 
-                let key = x.GenerateKey ()
-                x.Brushes.[key] <- (bd, ref null)
-                key
-        member x.CreateTextFormat            (tfd : TextFormatDescriptor)   : TextFormatKey = 
-                let key = x.GenerateKey ()
-                x.TextFormats.[key] <- (tfd, ref null)
-                key
-        member x.CreateGeometry              (gd : GeometryDescriptor)      : GeometryKey   = 
-                let key = x.GenerateKey ()
-                x.Geometries.[key] <- (gd, ref null)
-                key
-        member x.CreateTransformedGeometry   (gd : GeometryDescriptor) (m : Matrix3x2) : GeometryKey =
-                let key = x.GenerateKey ()
-                x.TransformedGeometries.[key] <- (gd, m, ref null)
-                key
-
-    
-    type internal DirectWrite () = 
+    type DirectWrite () =
         let dwFactory           = new DirectWrite.Factory (DirectWrite.FactoryType.Shared)
 
-        let textFormatCache     = Dictionary<TextFormatDescriptor, DirectWrite.TextFormat>()
+        let textFormats         = Dictionary<TextFormatKey, DirectWrite.TextFormat>()
 
-        let CreateTextFormat (tfd : TextFormatDescriptor) =
-                new DirectWrite.TextFormat(dwFactory, tfd.FontFamily, tfd.FontSize)
+        member x.CreateTextFormat (tfd : TextFormatDescriptor) : DirectWrite.TextFormat =
+            new DirectWrite.TextFormat(dwFactory, tfd.FontFamily, tfd.FontSize)
 
-        member x.GetTextFormat (tfd : TextFormatDescriptor) : DirectWrite.TextFormat = textFormatCache.GetOrAdd(tfd, CreateTextFormat)
+        member x.GetTextFormatKey (key : TextFormatKey) (tfd : TextFormatDescriptor) : TextFormatKey =
+            if textFormats.ContainsKey key then key
+            else
+                let tf = x.CreateTextFormat tfd 
+                textFormats.Add(key, tf)
+                key
 
-        member x.EstimateTextSize (tfd : TextFormatDescriptor) (sz : Size2F) (text : string) = 
-            let tf = x.GetTextFormat tfd
-            use tl = new DirectWrite.TextLayout(dwFactory, text, tf, sz.Width, sz.Height)
-            let m = tl.Metrics
-            Size2F (m.Width, m.Height)
+        member x.EstimateTextSize (key : TextFormatKey) (sz : Size2F) (text : string) =
+            let tf = textFormats.Find key
+            match tf with
+            | Some tf -> 
+                use tl = new DirectWrite.TextLayout(dwFactory, text, tf, sz.Width, sz.Height)
+                let m = tl.Metrics
+                Size2F (m.Width, m.Height)
+            | _ -> Size2F ()
 
         interface IDisposable with
             member x.Dispose() =
-                let tfc = textFormatCache.ToArray ()
-                textFormatCache.Clear()
+                let tfc = textFormats.ToArray ()
+                textFormats.Clear()
                 for kv in tfc do
-                    TryDispose kv.Value 
-        
+                    TryDispose kv.Value
+
+    type SharedResources() =
+        let key                             = ref 1
+        let brushes                         = ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           >()
+        let textFormats                     = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    >()
+        let geometries                      = ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        >()
+        let transformedGeometries           = ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref >()
+
+        let brushDescriptors                = ConcurrentDictionary<BrushDescriptor                  , BrushKey              >()
+        let textFormatDescriptors           = ConcurrentDictionary<TextFormatDescriptor             , TextFormatKey         >()
+        let geometryDescriptors             = ConcurrentDictionary<GeometryDescriptor               , GeometryKey           >()
+        let transformedGeometryDescriptors  = ConcurrentDictionary<GeometryDescriptor * Matrix3x2   , TransformedGeometryKey>()
+
+        let generateKey () = Interlocked.Increment key
+
+        let getKey 
+            (resources  : ConcurrentDictionary<int, 'V> ) 
+            (keys       : ConcurrentDictionary<'D, int> ) 
+            (d          : 'D                            )
+            (creator    : unit->'V                      )
+            : int =
+
+            match keys.Find d with
+            | Some key  ->  key
+            | _         ->  
+                let rec insertKey () =
+                    let key = generateKey ()
+                    let r   = keys.TryAdd (d, key)
+                    if r then 
+                        let ir = resources.TryAdd (key, creator ())
+                        if ir then key
+                        else failwith "Failed to insert new key into resource dictionary, as a new key is unique this is shouldn't happen"
+                    else insertKey () 
+                insertKey ()
+
+        interface IDisposable with
+            member x.Dispose () =
+                let bs  = brushes.ToArray ()
+                let tfs = textFormats.ToArray ()
+                let gs  = geometries.ToArray ()
+                let tgs = transformedGeometries.ToArray ()
+
+                brushes.Clear ()
+                textFormats.Clear ()
+                geometries.Clear ()
+                transformedGeometries.Clear ()
+                brushDescriptors.Clear ()
+                textFormatDescriptors.Clear ()
+                geometryDescriptors.Clear ()
+                transformedGeometryDescriptors.Clear ()
+
+                bs  |> Seq.map (fun kv -> let _,b = kv.Value in !b)     |> TryDisposeSequence
+                tfs |> Seq.map (fun kv -> let _,tf = kv.Value in !tf)   |> TryDisposeSequence
+                gs  |> Seq.map (fun kv -> let _,g = kv.Value in !g)     |> TryDisposeSequence
+                tgs |> Seq.map (fun kv -> let _,_,tg = kv.Value in !tg) |> TryDisposeSequence
+
+        member x.Device_Brushes                 = brushes
+        member x.Device_TextFormats             = textFormats
+        member x.Device_Geometries              = geometries
+        member x.Device_TransformedGeometries   = transformedGeometries
+
+        member x.GetBrush                 (bd : BrushDescriptor)        : BrushKey      =
+                getKey brushes brushDescriptors bd <| fun () -> (bd, ref null)
+
+        member x.GetTextFormat            (tfd : TextFormatDescriptor)  : TextFormatKey =
+                getKey textFormats textFormatDescriptors tfd <| fun () -> (tfd, ref null)
+
+        member x.GetGeometry              (gd : GeometryDescriptor)     : GeometryKey   =
+                getKey geometries geometryDescriptors gd <| fun () -> (gd, ref null)
+
+        member x.GetTransformedGeometry   (gd : GeometryDescriptor) (t : Matrix3x2) : GeometryKey =
+                let d = gd,t
+                getKey transformedGeometries transformedGeometryDescriptors d <| fun () -> (gd, t, ref null)
+
     [<AbstractClass>]
-    type internal GenericDevice() =
+    type GenericDevice() =
         abstract member GetBrush                : BrushDescriptor*float32       -> Direct2D1.Brush
-        abstract member GetTextFormat           : TextFormatDescriptor          -> DirectWrite.TextFormat
+        abstract member GetTextFormat           : TextFormatKey                 -> DirectWrite.TextFormat
         abstract member GetGeometry             : GeometryKey                   -> Direct2D1.Geometry
         abstract member GetTransformedGeometry  : TransformedGeometryKey        -> Direct2D1.TransformedGeometry
-        
 
-    type internal WindowedDevice(form : Windows.RenderForm, sharedResources : SharedResources) = 
+
+    type WindowedDevice(form : Windows.RenderForm, sharedResources : SharedResources) =
 
         inherit GenericDevice()
 
@@ -123,7 +151,7 @@ module public Device =
             let device              = RefOf<Direct3D11.Device>
             let swapChain           = RefOf<DXGI.SwapChain>
 
-            let featureLevels       = 
+            let featureLevels       =
                 [|
                     Direct3D.FeatureLevel.Level_11_0
                     Direct3D.FeatureLevel.Level_10_1
@@ -134,10 +162,10 @@ module public Device =
                 |]
 
             Direct3D11.Device.CreateWithSwapChain(
-                Direct3D.DriverType.Hardware                , 
-                Direct3D11.DeviceCreationFlags.BgraSupport  , 
-                featureLevels                               , 
-                desc                                        , 
+                Direct3D.DriverType.Hardware                ,
+                Direct3D11.DeviceCreationFlags.BgraSupport  ,
+                featureLevels                               ,
+                desc                                        ,
                 device                                      , swapChain
                 )
 
@@ -156,11 +184,11 @@ module public Device =
         let backBuffer          = Direct3D11.Texture2D.FromSwapChain<Direct3D11.Texture2D>(swapChain, 0)
         let surface             = backBuffer.QueryInterface<SharpDX.DXGI.Surface>();
         let d2dRenderTarget     = new Direct2D1.RenderTarget(
-                                    d2dFactory                          , 
-                                    surface                             , 
+                                    d2dFactory                          ,
+                                    surface                             ,
                                     Direct2D1.RenderTargetProperties(
                                         Direct2D1.PixelFormat(
-                                            DXGI.Format.Unknown         , 
+                                            DXGI.Format.Unknown         ,
                                             Direct2D1.AlphaMode.Premultiplied
                                             )
                                         )
@@ -185,30 +213,30 @@ module public Device =
                     sink.EndFigure FigureEnd.Closed
 
 
-        let Solid (c : ColorDescriptor) =  new Direct2D1.SolidColorBrush(d2dRenderTarget, c.ToColor4)                                    
+        let Solid (c : ColorDescriptor) =  new Direct2D1.SolidColorBrush(d2dRenderTarget, c.ToColor4)
 
-        let CreateBrush (bd : BrushDescriptor) : Direct2D1.Brush = 
+        let CreateBrush (bd : BrushDescriptor) : Direct2D1.Brush =
                 match bd with
                 | Transparent       -> null
                 | SolidColor c      -> upcast Solid c
-            
+
         let brushCache = Dictionary<BrushDescriptor, Direct2D1.Brush>()
 
-        let geometryCache = 
+        let geometryCache =
                 [
-                    EquilateralTriangle     , DrawPathGeometryFromVertices 
+                    EquilateralTriangle     , DrawPathGeometryFromVertices
                                                 [|
                                                      +0.0F, (sqrt 3.0F) / 2.0F - 1.0F / (2.0F * sqrt 3.0F)
                                                      +0.5F, - 1.0F / (2.0F * sqrt 3.0F)
                                                      -0.5F, - 1.0F / (2.0F * sqrt 3.0F)
                                                 |]
-                    Triangle45x45x90        , DrawPathGeometryFromVertices 
+                    Triangle45x45x90        , DrawPathGeometryFromVertices
                                                 [|
                                                      +0.0F, +0.0F
                                                      +0.5F, +0.5F
                                                      -0.5F, +0.5F
                                                 |]
-                    UnitSquare              , DrawPathGeometryFromVertices 
+                    UnitSquare              , DrawPathGeometryFromVertices
                                                 [|
                                                      +0.5F, +0.5F
                                                      +0.5F, -0.5F
@@ -217,13 +245,8 @@ module public Device =
                                                 |]
                 ] |> ToDictionary
 
-        let transformedGeometryCache = Dictionary<GeometryDescriptor*Matrix3x2, Direct2D1.TransformedGeometry>()
-
-        let CreateTransformedGeometry (shape : GeometryDescriptor, transform : Matrix3x2) : Direct2D1.TransformedGeometry = 
-                new TransformedGeometry(d2dFactory, geometryCache.[shape], transform)
-
         override x.GetBrush (bd : BrushDescriptor, opacity : float32) : Direct2D1.Brush =
-            if opacity > 0.F then 
+            if opacity > 0.F then
                 let b = brushCache.GetOrAdd(bd, CreateBrush)
                 b.Opacity <- opacity
                 b
@@ -233,28 +256,34 @@ module public Device =
 
         member x.DirectWrite        = directWrite
 
-        override x.GetTextFormat (tfd : TextFormatDescriptor) : DirectWrite.TextFormat =
-            x.DirectWrite.GetTextFormat tfd
+        override x.GetTextFormat (key : TextFormatKey) : DirectWrite.TextFormat =
+            let find = sharedResources.Device_TextFormats.Find key
+            match find with
+            | Some (textFormatDescriptor, textFormat) when !textFormat <> null -> !textFormat
+            | Some (textFormatDescriptor, textFormat) ->
+                textFormat := directWrite.CreateTextFormat textFormatDescriptor
+                !textFormat
+            | _ -> null
 
         override x.GetGeometry (key : GeometryKey) : Direct2D1.Geometry =
-            let find = sharedResources.Geometries.Find key
+            let find = sharedResources.Device_Geometries.Find key
             match find with
             | Some (geometryDescriptor, geometry) when !geometry <> null -> !geometry
-            | Some (geometryDescriptor, geometry) -> 
+            | Some (geometryDescriptor, geometry) ->
                 geometry := geometryCache.[geometryDescriptor]
                 !geometry
             | _ -> null
-            
-        
+
+
         override x.GetTransformedGeometry (key : TransformedGeometryKey) : Direct2D1.TransformedGeometry =
-            let find = sharedResources.TransformedGeometries.Find key
+            let find = sharedResources.Device_TransformedGeometries.Find key
             match find with
             | Some (geometryDescriptor, t, geometry) when !geometry <> null -> !geometry
-            | Some (geometryDescriptor, t, geometry) -> 
-                geometry := transformedGeometryCache.GetOrAdd((geometryDescriptor, t), CreateTransformedGeometry)
+            | Some (geometryDescriptor, t, geometry) ->
+                geometry := new TransformedGeometry(d2dFactory, geometryCache.[geometryDescriptor], t)
                 !geometry
             | _ -> null
-        
+
         member x.Width              = width
         member x.Height             = height
 
@@ -269,11 +298,13 @@ module public Device =
 
         interface IDisposable with
             member x.Dispose() =
+                // Do not dispose sharedResources as it's passed from the outside
+                // TryDispose sharedResources
+
                 let bc = brushCache.ToArray()
                 brushCache.Clear()
                 for kv in bc do
-                    TryDispose kv.Value 
-                TryDispose sharedResources
+                    TryDispose kv.Value
                 TryDispose d2dRenderTarget
                 TryDispose surface
                 TryDispose backBuffer
@@ -282,7 +313,7 @@ module public Device =
                 TryDispose device
                 TryDispose d2dFactory
                 TryDispose directWrite
-            
+
 
 
 

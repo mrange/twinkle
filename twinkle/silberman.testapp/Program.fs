@@ -7,27 +7,27 @@ open Logical.Events
 open Logical.Properties
 
 [<EntryPoint>]
-let main argv = 
-    let body = 
-        Stack 
+let main argv =
+    let body =
+        Stack
             [
                 Orientation.Value FromTop
             ]
             [
-                Label 
-                    [ 
+                Label
+                    [
                         Margin  .Value <| Thickness.Uniform 4.F
-                        Text    .Value "Hi there!" 
+                        Text    .Value "Hi there!"
                     ]
 //                TextButton "Click me!"
-//                    [ 
+//                    [
 //                    ]
 //                    >>+ Clicked.Handler (fun e v -> true)
 
-                Label 
-                    [ 
+                Label
+                    [
                         Margin      .Value <| Thickness.Uniform 4.F
-                        Text        .Value "Hello there!" 
+                        Text        .Value "Hello there!"
                     ]
             ]
 

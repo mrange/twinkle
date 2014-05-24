@@ -11,11 +11,11 @@ open SharpDX
 open Fundamental
 open Visual
 
-module public Logical = 
+module public Logical =
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type LayoutRotation = 
+    type LayoutRotation =
         | D0
         | D90
         | D180
@@ -23,13 +23,13 @@ module public Logical =
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type LayoutTransform = 
+    type LayoutTransform =
         {
             Rotation : LayoutRotation
             Scaling  : float32
         }
 
-    type StackOrientation = 
+    type StackOrientation =
         | FromLeft
         | FromRight
         | FromTop
@@ -38,18 +38,18 @@ module public Logical =
     let TransparentBrush        = BrushDescriptor.Transparent
     let SolidBrush (c : Color)  = BrushDescriptor.SolidColor <| ColorDescriptor.Color c
 
-    module Foundation = 
-        
+    module Foundation =
+
         [<ReferenceEquality>]
-        type ElementContext = 
+        type ElementContext =
             {
                 CreateBrush                 : BrushDescriptor       -> BrushKey
                 CreateTextFormat            : TextFormatDescriptor  -> TextFormatKey
                 CreateGeometry              : GeometryDescriptor    -> GeometryKey
                 CreateTransformedGeometry   : GeometryDescriptor    -> Matrix3x2 -> TransformedGeometryKey
-                MeasureText                 : TextFormatDescriptor  -> Size2F -> string -> Size2F
+                MeasureText                 : TextFormatKey         -> Size2F -> string -> Size2F
             }
-            static member New cb ctf cg ctg mt = 
+            static member New cb ctf cg ctg mt =
                             {
                                 CreateBrush                 = cb
                                 CreateTextFormat            = ctf
@@ -63,32 +63,32 @@ module public Logical =
             let safe     = obj()
             let explicit = ConcurrentDictionary<Type,'T>()
             let implicit = ConcurrentDictionary<Type,'T option>()
-            
-            member x.Add k v = 
-                lock safe <| fun () -> 
+
+            member x.Add k v =
+                lock safe <| fun () ->
                                 if explicit.TryAdd(k,v) then
                                     implicit.Clear ()
-                                else 
+                                else
                                     ()
 
-            member x.Replace k (v : 'T) = 
-                lock safe <| fun () -> 
+            member x.Replace k (v : 'T) =
+                lock safe <| fun () ->
                                 ignore <| explicit.AddOrUpdate(k,v,(fun _ _ -> v))
                                 implicit.Clear ()
 
-            member x.Remove k v = 
-                lock safe <| fun () -> 
+            member x.Remove k v =
+                lock safe <| fun () ->
                                 if explicit.TryRemove(k,v) then
                                     implicit.Clear ()
-                                else 
+                                else
                                     ()
 
             member x.Clear () =
-                lock safe <| fun () -> 
+                lock safe <| fun () ->
                                 explicit.Clear ()
                                 implicit.Clear ()
 
-            member private x.TryFindBase_NoLock (k : Type) = 
+            member private x.TryFindBase_NoLock (k : Type) =
                 let v = RefOf<'T>
                 let found = explicit.TryGetValue(k, v)
                 if found then
@@ -99,20 +99,20 @@ module public Logical =
                     let b = k.BaseType
                     if b = null then None
                     else
-                        let r = x.TryFindBase_NoLock b 
+                        let r = x.TryFindBase_NoLock b
                         ignore <| implicit.TryAdd(k,r)
                         r
 
 
-            member x.TryFind k = 
+            member x.TryFind k =
                 let v : 'T option ref = ref None
                 if implicit.TryGetValue(k, v) then
                     !v
                 else
                     lock safe <| fun () -> x.TryFindBase_NoLock k
-                        
 
-        type PropertyType = 
+
+        type PropertyType =
                 | Computed
                 | Persistent
                 | Empty
@@ -125,12 +125,12 @@ module public Logical =
         and PropertyValueChanged<'T>    = Element -> 'T -> 'T -> unit
         and ComputePropertyValue<'T>    = Element -> 'T
         and EventHandler<'TEventValue>   = Element -> 'TEventValue -> bool
-        and [<AbstractClass>] Member(id : string, declaringType : Type) = 
+        and [<AbstractClass>] Member(id : string, declaringType : Type) =
             inherit obj()
 
 
             static let globalId = ref 1000
-            static let CreateInternalId () : int = 
+            static let CreateInternalId () : int =
                             let id = Interlocked.Increment globalId
                             id
 
@@ -152,7 +152,7 @@ module public Logical =
 
             override x.ToString () = sprintf "%s:%s.%s (%d)" (x.GetType().Name) x.DeclaringType.Name x.Id internalId
 
-            override x.Equals o = 
+            override x.Equals o =
                         match o with
                         | :? Member as m    -> internalId = m.InternalId
                         | _                 -> false
@@ -163,16 +163,16 @@ module public Logical =
             inherit Member(id, declaringType)
 
             member x.EventValueType = eventValueType
-            
+
             static member Routed<'TDeclaring, 'TEventValue> id  (sample : 'TEventValue) = Event<'TEventValue>(id,typeof<'TDeclaring>)
             static member Empty = Event.Routed<Event, obj> "<EMPTY>"
-            
+
         and [<Sealed>] Event<'TEventValue>(id : string, declaringType : Type) =
             inherit Event(id, typeof<'TEventValue>, declaringType)
 
             member x.Handler (eh : EventHandler<'TEventValue>) = EventListener<'TEventValue>(x, eh)
 
-        and [<AbstractClass>] Property(id : string, ``type`` : Type, declaringType : Type) = 
+        and [<AbstractClass>] Property(id : string, ``type`` : Type, declaringType : Type) =
             inherit Member(id, declaringType)
 
             static let __NoAction              (le : Element) (ov : 'T) (nv : 'T) = le.NoAction                ()
@@ -193,31 +193,31 @@ module public Logical =
             static member Empty = empty
 
         and [<Sealed>] EmptyProperty() =
-            inherit Property("<EMPTY>", typeof<obj>, typeof<Property>)    
+            inherit Property("<EMPTY>", typeof<obj>, typeof<Property>)
 
             override x.OnPropertyType ()    = Empty
 
-        and [<AbstractClass>] Property<'T>(id : string, declaringType : Type) = 
-            inherit Property(id, typeof<'T>, declaringType)    
+        and [<AbstractClass>] Property<'T>(id : string, declaringType : Type) =
+            inherit Property(id, typeof<'T>, declaringType)
 
-        and [<Sealed>] PersistentProperty<'T when 'T : equality>(id : string, declaringType : Type, defaultValue : PropertyDefaultValue<'T>, valueChanged : PropertyValueChanged<'T>)= 
-            inherit Property<'T>(id, declaringType)    
+        and [<Sealed>] PersistentProperty<'T when 'T : equality>(id : string, declaringType : Type, defaultValue : PropertyDefaultValue<'T>, valueChanged : PropertyValueChanged<'T>)=
+            inherit Property<'T>(id, declaringType)
 
             static let overrideDefaultValue = TypeDictionary<PropertyDefaultValue<'T>>()
             static let overrideValueChanged = TypeDictionary<PropertyValueChanged<'T>>()
 
             override x.OnPropertyType ()    = Computed
 
-            member x.DefaultValue (e : Element)             = 
+            member x.DefaultValue (e : Element)             =
                         let dv = (overrideDefaultValue.TryFind <| e.GetType()) <??> defaultValue
                         match dv with
                         | Value         v -> v      , true
                         | ValueCreator  vc-> vc e   , false
 
-            member x.ValueChanged e oldValue newValue      = 
+            member x.ValueChanged e oldValue newValue      =
                         let vc = (overrideValueChanged.TryFind <| e.GetType()) <??> valueChanged
                         vc e oldValue newValue
-                        
+
 
             member x.Value (v : 'T) = PropertyValue<'T>(x, v)
 
@@ -232,14 +232,14 @@ module public Logical =
                         | None              -> ()
                         ()
 
-        and [<Sealed>] ComputedProperty<'T>(id : string, declaringType : Type, computeValue : ComputePropertyValue<'T>) = 
+        and [<Sealed>] ComputedProperty<'T>(id : string, declaringType : Type, computeValue : ComputePropertyValue<'T>) =
             inherit Property<'T>(id, declaringType)
 
             static let overrideCompute  = TypeDictionary<ComputePropertyValue<'T>>()
 
             override x.OnPropertyType ()= Persistent
 
-            member x.ComputeValue (e : Element) = 
+            member x.ComputeValue (e : Element) =
                         let cv = (overrideCompute.TryFind <| e.GetType()) <??> computeValue
                         cv e
 
@@ -251,16 +251,16 @@ module public Logical =
                         | None              -> ()
                         ()
 
-        and [<AbstractClass>] Element() = 
-        
+        and [<AbstractClass>] Element() =
+
             let mutable parent  : Element option        = None
 
-            static let __NoAction              (le : Element) (ov : 'T) (nv : 'T) = le.NoAction                ()
-            static let __InvalidateMeasurement (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateMeasurement   ()
-            static let __InvalidatePlacement   (le : Element) (ov : 'T) (nv : 'T) = le.InvalidatePlacement     ()
-            static let __InvalidateVisual      (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateVisual        ()
+            static let __NoAction                   (le : Element) (ov : 'T) (nv : 'T) = le.NoAction                ()
+            static let __InvalidateMeasurement      (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateMeasurement   ()
+            static let __InvalidatePlacement        (le : Element) (ov : 'T) (nv : 'T) = le.InvalidatePlacement     ()
+            static let __InvalidateVisual           (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateVisual        ()
 
-            static let Persistent id valueChanged value = Property.Persistent<Element, _>   id valueChanged value 
+            static let Persistent id valueChanged value = Property.Persistent<Element, _>   id valueChanged value
             static let Computed   id computeValue       = Property.Computed<Element, _>     id computeValue
             static let Routed     id sample             = Event.Routed<Element, _>          id sample
 
@@ -269,27 +269,33 @@ module public Logical =
             let properties      = Dictionary<Property, obj>()
             let eventHandlers   = Dictionary<Event, obj>()
 
-            static let elementContext       = Persistent "ElementContext"  __NoAction              <| Value (None : ElementContext option)
+            static let elementContext       = Persistent "ElementContext"  __NoAction               <| Value (None : ElementContext option)
 
-            static let measurement          = Persistent "Measurement"     __NoAction              <| Value (None : Measurement option)
-            static let placement            = Persistent "Placement"       __NoAction              <| Value (None : Placement option)
-            static let visual               = Persistent "Visual"          __NoAction              <| Value (None : VisualTree option)
-                                                                                              
-            static let bounds               = Persistent "Bounds"          __InvalidateMeasurement <| Value Bounds.MinMin
-            static let isVisible            = Persistent "IsVisible"       __InvalidateMeasurement <| Value true           
-                                             
-            static let margin               = Persistent "Margin"          __InvalidateMeasurement <| Value Thickness.Zero 
-                                             
-            static let fontFamily           = Persistent "FontFamily"      __InvalidateMeasurement <| Value "Calibri"      
-            static let fontSize             = Persistent "FontSize"        __InvalidateMeasurement <| Value 24.F           
+            static let measurement          = Persistent "Measurement"     __NoAction               <| Value (None : Measurement option)
+            static let placement            = Persistent "Placement"       __NoAction               <| Value (None : Placement option)
+            static let visual               = Persistent "Visual"          __NoAction               <| Value (None : VisualTree option)
 
-            static let background           = Persistent "Background"       __InvalidateVisual     <| Value BrushDescriptor.Transparent
-            static let foreground           = Persistent "Foreground"       __InvalidateVisual     <| Value (SolidBrush Color.Black)
+            static let bounds               = Persistent "Bounds"          __InvalidateMeasurement  <| Value Bounds.MinMin
+            static let isVisible            = Persistent "IsVisible"       __InvalidateMeasurement  <| Value true
 
-            static let textFormatDescriptor = Computed   "FontSize"        <| fun x -> 
-                                                                                    let fontFamily  = x.Get fontFamily
-                                                                                    let fontSize    = x.Get fontSize
-                                                                                    TextFormatDescriptor.New fontFamily fontSize
+            static let margin               = Persistent "Margin"          __InvalidateMeasurement  <| Value Thickness.Zero
+
+            static let fontFamily           = Persistent "FontFamily"      __InvalidateMeasurement  <| Value "Calibri"
+            static let fontSize             = Persistent "FontSize"        __InvalidateMeasurement  <| Value 24.F
+            static let textFormatKey        = Persistent "TextFormatKey"   __InvalidateMeasurement  <| ValueCreator 
+                                                                                                        (fun e -> 
+                                                                                                            let context     = e.Context
+                                                                                                            let fontFamily  = e.Get fontFamily
+                                                                                                            let fontSize    = e.Get fontSize
+                                                                                                            match context with
+                                                                                                            | Some c    -> c.CreateTextFormat <| TextFormatDescriptor.New fontFamily fontSize
+                                                                                                            | _         -> 0
+                                                                                                        )
+            //static let __InvalidateTextFormatKey    (le : Element) (ov : 'T) (nv : 'T)              = le.Clear textFormatKey
+
+            static let background           = Persistent "Background"       __InvalidateVisual      <| Value BrushDescriptor.Transparent
+            static let foreground           = Persistent "Foreground"       __InvalidateVisual      <| Value (SolidBrush Color.Black)
+
 
             static let attached             = Routed        "Attached"      ()
             static let detached             = Routed        "Detached"      ()
@@ -309,16 +315,16 @@ module public Logical =
 
             member x.Children       = x.OnChildren ()
 
-            member x.Parent 
+            member x.Parent
                 with get ()         = parent
 
-            member x.Root 
-                with get ()         = 
+            member x.Root
+                with get ()         =
                         match parent with
                         | None        -> x
                         | Some parent -> parent.Root
 
-            member x.Context        = 
+            member x.Context        =
                         let root = x.Root
                         root.Get elementContext
 
@@ -328,40 +334,40 @@ module public Logical =
             member private x.ValidateEvent (e :Event<'T>) =
                 e.ValidateMember <| x.GetType()
 
-            member private x.TryGet (lp :Property<'T>)  : 'T option = 
+            member private x.TryGet (lp :Property<'T>)  : 'T option =
                     let v = properties.Find lp
                     match v with
                     | None      -> None
-                    | Some v    -> 
+                    | Some v    ->
                         let tv = v.As<'T> ()
                         match tv with
                         | None      -> Debug.Assert false; None
                         | Some tv   -> Some tv
 
 
-            member x.Get    (lp : ComputedProperty<'T>)  : 'T = 
+            member x.Get    (lp : ComputedProperty<'T>)  : 'T =
                     x.ValidateProperty lp
                     lp.ComputeValue x
 
-            member x.Get<'T when 'T : equality> (lp : PersistentProperty<'T>)  : 'T = 
+            member x.Get<'T when 'T : equality> (lp : PersistentProperty<'T>)  : 'T =
                     x.ValidateProperty lp
                     let v = x.TryGet lp
                     match v with
                     | Some v    -> v
-                    | None      -> 
+                    | None      ->
                         ignore <| properties.Remove lp  // Shouldn't be necessary but if the TryGet assert fails this is required to clear local value
                         let dv,shared = lp.DefaultValue x
-                        if not shared then 
+                        if not shared then
                             properties.Add(lp,dv)
                         dv  // No ValueChanged on initializing the default value
 
-            member x.Get    (lp : Property<'T>)           : 'T = 
+            member x.Get    (lp : Property<'T>)           : 'T =
                     match lp.PropertyType with
                     | Computed      -> x.Get (lp :?> ComputedProperty<'T>)
                     | Persistent    -> x.Get (lp :?> PersistentProperty<'T>)
                     | Empty         -> DefaultOf<_>
 
-            member x.Set<'T when 'T : equality> (lp : PersistentProperty<'T>) (v : 'T)  : unit = 
+            member x.Set<'T when 'T : equality> (lp : PersistentProperty<'T>) (v : 'T)  : unit =
                     x.ValidateProperty lp
                     let pv = x.Get lp
                     if pv = v then ()
@@ -369,7 +375,7 @@ module public Logical =
                         properties.[lp] <- v
                         lp.ValueChanged x pv v
 
-            member x.Clear  (lp : PersistentProperty<'T>)           : unit = 
+            member x.Clear  (lp : PersistentProperty<'T>)           : unit =
                     x.ValidateProperty lp
                     let v = x.TryGet lp
                     ignore <| properties.Remove lp  // Shouldn't be necessary but if the TryGet assert fails this is required to clear local value
@@ -384,9 +390,9 @@ module public Logical =
 
             member x.AssignFromPropertyValues (pvs : PropertyValue list) =
                 for pv in pvs do
-                    ignore <| pv.AssignValueTo x 
+                    ignore <| pv.AssignValueTo x
 
-            member internal x.RaiseEventImpl (e : Event<'TEventValue>) (v : 'TEventValue) = 
+            member internal x.RaiseEventImpl (e : Event<'TEventValue>) (v : 'TEventValue) =
                     x.ValidateEvent e
                     let event = eventHandlers.Find e
                     match event,parent with
@@ -399,14 +405,14 @@ module public Logical =
                                                    if handled then true
                                                    else parent.RaiseEventImpl e v
 
-            member x.RaiseEvent (e : Event<'TEventValue>) (v : 'TEventValue) = 
+            member x.RaiseEvent (e : Event<'TEventValue>) (v : 'TEventValue) =
                     x.ValidateEvent e
                     x.RaiseEventImpl e v
 
-            member x.ClearEventHandler (e : Event<'TEventValue>) = 
+            member x.ClearEventHandler (e : Event<'TEventValue>) =
                     ignore <| eventHandlers.Remove e
 
-            member x.SetEventHandler (e : Event<'TEventValue>) (eh : EventHandler<'TEventValue>) = 
+            member x.SetEventHandler (e : Event<'TEventValue>) (eh : EventHandler<'TEventValue>) =
                     eventHandlers.[e] <- eh
 
             member internal x.SetParent p =
@@ -428,23 +434,23 @@ module public Logical =
 
             static member ElementContext        = elementContext
 
-            static member Measurement           = measurement         
-            static member Placement             = placement           
-            static member Visual                = visual              
-                                                                      
-            static member Bounds                = bounds              
-            static member IsVisible             = isVisible           
-                                                                      
-            static member Margin                = margin              
-                                                                      
-            static member FontFamily            = fontFamily          
-            static member FontSize              = fontSize            
+            static member Measurement           = measurement
+            static member Placement             = placement
+            static member Visual                = visual
 
-            static member Background            = background          
-            static member Foreground            = foreground          
+            static member Bounds                = bounds
+            static member IsVisible             = isVisible
 
-            static member TextFormatDescriptor  = textFormatDescriptor
-                                                  
+            static member Margin                = margin
+
+            static member FontFamily            = fontFamily
+            static member FontSize              = fontSize
+
+            static member Background            = background
+            static member Foreground            = foreground
+
+            static member TextFormatKey         = textFormatKey
+
             static member Attached              = attached
             static member Detached              = detached
 
@@ -463,44 +469,44 @@ module public Logical =
             default x.OnRenderChild     (o : Placement)
                                         (i : Placement)
                                         (e : Element)
-                                                        = e.Render ()        
+                                                        = e.Render ()
 
-            member x.NoAction               () = ()            
-            member x.InvalidateMeasurement  () = 
+            member x.NoAction               () = ()
+            member x.InvalidateMeasurement  () =
                 let m = x.Get Element.Measurement
-                match m with 
+                match m with
                 | None      -> ()
                 | Some _    -> x.Clear Element.Measurement
                                x.Clear Element.Placement
                                x.Clear Element.Visual
                                match x.Parent with
-                               | Some p -> p.InvalidateMeasurement ()          
+                               | Some p -> p.InvalidateMeasurement ()
                                | None   -> ()
-            member x.InvalidatePlacement    () =             
+            member x.InvalidatePlacement    () =
                 let p = x.Get Element.Placement
-                match p with 
+                match p with
                 | None      -> ()
                 | Some _    -> x.Clear Element.Placement
                                x.Clear Element.Visual
                                match x.Parent with
-                               | Some p -> p.InvalidatePlacement ()          
+                               | Some p -> p.InvalidatePlacement ()
                                | None   -> ()
-            member x.InvalidateVisual       () = 
+            member x.InvalidateVisual       () =
                 let v = x.Get Element.Visual
-                match v with 
+                match v with
                 | None      -> ()
                 | Some _    -> x.Clear Element.Visual
                                match x.Parent with
-                               | Some p -> p.InvalidateVisual ()          
+                               | Some p -> p.InvalidateVisual ()
                                | None   -> ()
 
             member x.EffectiveMargin                    = x.OnGetEffectiveMargin ()
 
-            member x.MeasureElement (a  : Available)    = 
+            member x.MeasureElement (a  : Available)    =
                         let cachedMeasure = x.Get Element.Measurement
                         match cachedMeasure with
                         | Some m when a.IsMeasurementValid m  -> m
-                        | _                                   -> 
+                        | _                                   ->
                             let box = x.EffectiveMargin
                             let bounds = x.Get Element.Bounds
                             let innerMeasure = x.OnMeasureContent<| a - box
@@ -510,35 +516,35 @@ module public Logical =
                             x.Set Element.Visual None
                             finalMeasure
 
-            member x.PlaceElement   (p : Placement)     = 
+            member x.PlaceElement   (p : Placement)     =
                         let cachedPlacement = x.Get Element.Placement
                         match cachedPlacement with
                         | Some cp when cp = p -> ()
-                        | _                   -> 
+                        | _                   ->
                             let cachedMeasure = x.Get Element.Measurement
                             match cachedMeasure with
                             | None            -> ()
-                            | Some cm         ->  
+                            | Some cm         ->
                                 let box = x.EffectiveMargin
                                 let bounds = x.Get Element.Bounds
                                 let finalPlacement = bounds.AdjustPlacement cm p
                                 x.OnPlaceElement finalPlacement <| finalPlacement - box
                                 x.Set Element.Placement <| Some finalPlacement
                                 x.Set Element.Visual None
-                                                        
 
-            member x.Render ()                          = 
+
+            member x.Render ()                          =
                         let cachedVisual = x.Get Element.Visual
                         match cachedVisual with
                         | Some v    -> v
-                        | None      -> 
+                        | None      ->
                             let box = x.EffectiveMargin
                             let p = x.Get Element.Placement
                             match p with
                             | None                      -> NoVisual
                             | Some p when p.IsZero      -> NoVisual
-                            | Some outer                -> 
-                            
+                            | Some outer                ->
+
                                 let inner = outer - box
 
                                 let visualContent = x.OnRenderContent outer inner
@@ -555,7 +561,7 @@ module public Logical =
                                 visualChildren.[0] <- visualContent
                                 visualChildren.[visualChildren.Length - 1] <- visualOverlay
 
-                                let visual = 
+                                let visual =
                                     match visualContent, children.Length, visualOverlay with
                                     | VisualTree.NoVisual , 0     , VisualTree.NoVisual   -> VisualTree.NoVisual
                                     | _                   , 0     , VisualTree.NoVisual   -> visualContent
@@ -565,72 +571,72 @@ module public Logical =
 
                                 x.Set Element.Visual <| Some visual
                                 visual
-        and [<AbstractClass>] EventListener(e : Event) =  
-        
+        and [<AbstractClass>] EventListener(e : Event) =
+
             abstract OnSetListener  : Element -> unit
             abstract OnClearListener: Element -> unit
 
-            member x.SetListener (ee : Element) = 
+            member x.SetListener (ee : Element) =
                         if e.IsMemberOf <| ee.GetType () then
-                            x.OnSetListener ee 
+                            x.OnSetListener ee
                             true
                         else false
 
-            member x.ClearListener (ee : Element) = 
+            member x.ClearListener (ee : Element) =
                         if e.IsMemberOf <| ee.GetType () then
-                            x.OnClearListener ee 
+                            x.OnClearListener ee
                             true
                         else false
 
             member x.Event  = e
 
-        and EventListener<'TEventValue>(e : Event<'TEventValue>, handler : EventHandler<'TEventValue>)= 
+        and EventListener<'TEventValue>(e : Event<'TEventValue>, handler : EventHandler<'TEventValue>)=
             inherit EventListener(e)
-        
+
             member x.Handler : EventHandler<'TEventValue> = handler
 
-            override x.OnSetListener (ee : Element) = 
+            override x.OnSetListener (ee : Element) =
                         ee.SetEventHandler e handler
                         ()
-                    
-            override x.OnClearListener (ee : Element) = 
+
+            override x.OnClearListener (ee : Element) =
                         ee.ClearEventHandler e
                         ()
-        and [<AbstractClass>] PropertyValue(p : Property) =  
-        
+        and [<AbstractClass>] PropertyValue(p : Property) =
+
             abstract OnAssignValueTo : Element -> bool
 
-            member x.AssignValueTo (e : Element) = 
+            member x.AssignValueTo (e : Element) =
                         if p.IsMemberOf <| e.GetType () then
-                            x.OnAssignValueTo e 
+                            x.OnAssignValueTo e
                         else false
 
             member x.Property   = p
 
-        and PropertyValue<'T when 'T : equality>(p : PersistentProperty<'T>, v : 'T)= 
+        and PropertyValue<'T when 'T : equality>(p : PersistentProperty<'T>, v : 'T)=
             inherit PropertyValue(p)
-        
+
             member x.Value      = v
 
-            override x.OnAssignValueTo (e : Element) = 
+            override x.OnAssignValueTo (e : Element) =
                         e.Set p v
                         true
-                    
 
-                                                      
+
+
     let NoAction                (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.NoAction                ()
     let InvalidateMeasurement   (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.InvalidateMeasurement   ()
     let InvalidatePlacement     (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.InvalidatePlacement     ()
     let InvalidateVisual        (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.InvalidateVisual        ()
 
-    module Standard = 
+    module Standard =
 
         open Foundation
 
-        type [<AbstractClass>] ContainerElement() = 
+        type [<AbstractClass>] ContainerElement() =
             inherit Element()
-    
-            static let Persistent id valueChanged value = Property.Persistent<ContainerElement, _>  id valueChanged value 
+
+            static let Persistent id valueChanged value = Property.Persistent<ContainerElement, _>  id valueChanged value
 
             static let padding                  = Persistent "Padding"         InvalidateMeasurement    <| Value Thickness.Zero
 
@@ -641,7 +647,7 @@ module public Logical =
         type [<AbstractClass>] DecoratorElement() =
             inherit ContainerElement()
 
-            static let InvalidateChild (e : Element) (ov : Element option) (nv : Element option) = 
+            static let InvalidateChild (e : Element) (ov : Element option) (nv : Element option) =
                         match ov with
                         | None          -> ()
                         | Some child    -> child.ClearParent () // Invalidates old parent
@@ -650,7 +656,7 @@ module public Logical =
                         | None          -> ()
                         | Some child    -> child.SetParent e    // Invalidates parent
 
-            static let Persistent id valueChanged value = Property.Persistent<DecoratorElement, _>  id valueChanged value 
+            static let Persistent id valueChanged value = Property.Persistent<DecoratorElement, _>  id valueChanged value
 
             static let child        = Persistent     "Child"        InvalidateChild <| Value (None : Element option)
 
@@ -658,11 +664,11 @@ module public Logical =
 
             static member Child     = child
 
-            override x.OnChildren () = 
+            override x.OnChildren () =
                         let child = x.Get DecoratorElement.Child
                         match cachedChildren, child with
                         | Some c    , _         -> c
-                        | None      , Some c    -> 
+                        | None      , Some c    ->
                             let children = [|c|]
                             cachedChildren <- Some children
                             children
@@ -670,22 +676,22 @@ module public Logical =
                             let children = [||]
                             cachedChildren <- Some children
                             children
-                                    
-            override x.OnMeasureContent a   =   
+
+            override x.OnMeasureContent a   =
                         let child = x.Get DecoratorElement.Child
                         match child with
                         | None      -> Measurement.Zero
                         | Some c    -> c.MeasureElement a
 
-            override x.OnPlaceElement o i   =   
+            override x.OnPlaceElement o i   =
                         let child = x.Get DecoratorElement.Child
                         match child with
                         | None      -> ()
                         | Some c    -> c.PlaceElement i
 
-        type [<AbstractClass>] LayoutElement() = 
+        type [<AbstractClass>] LayoutElement() =
             inherit ContainerElement()
-    
+
             let children    = SortedDictionary<int, Element>()
 
             let mutable cachedChildren = None
@@ -705,44 +711,44 @@ module public Logical =
             member x.RemoveChild i    = let c = children.Find i
                                         match c with
                                         | None      -> ()
-                                        | Some le    -> 
+                                        | Some le    ->
                                             ignore <| children.Remove i
                                             le.ClearParent ()   // Invalidates old parent
                                             cachedChildren <- None
-                                        x  
+                                        x
 
         type DocumentElement(ctx : ElementContext) as x=
             inherit DecoratorElement()
 
             do
                 x.Set Element.ElementContext <| Some ctx
-                
-                
 
-        type StackElement() = 
+
+
+        type StackElement() =
             inherit LayoutElement()
 
-            let AccumulateMeasurement   (orientation : StackOrientation) (measurement : Measurement) (other : Measurement) = 
+            let AccumulateMeasurement   (orientation : StackOrientation) (measurement : Measurement) (other : Measurement) =
                 match orientation with
                 | FromLeft | FromRight  -> Measurement.New (measurement.Width + other.Width) (max measurement.Height other.Height)
-                | FromTop  | FromBottom -> Measurement.New (max measurement.Width other.Width) (measurement.Height + other.Height) 
-                
-            let SubtractAvailable       (orientation : StackOrientation) (available : Available) (other : Measurement) = 
+                | FromTop  | FromBottom -> Measurement.New (max measurement.Width other.Width) (measurement.Height + other.Height)
+
+            let SubtractAvailable       (orientation : StackOrientation) (available : Available) (other : Measurement) =
                 match orientation with
                 | FromLeft | FromRight  -> Available.New (available.Width - other.Width) available.Height
-                | FromTop  | FromBottom -> Available.New available.Width (available.Height - other.Height) 
+                | FromTop  | FromBottom -> Available.New available.Width (available.Height - other.Height)
 
             let Intersect (f : float32) (m : MeasurementUnit) =
                 match m with
-                | FixedMeasurement m    -> Clamp <| min f m 
+                | FixedMeasurement m    -> Clamp <| min f m
                 | Fill                  -> f
 
             let Subtract (f : float32) (m : MeasurementUnit) =
                 match m with
-                | FixedMeasurement m    -> Clamp <| f - m 
+                | FixedMeasurement m    -> Clamp <| f - m
                 | Fill                  -> 0.F
 
-            let AccumulateAndIntersectPlacement   (orientation : StackOrientation) (placement : Placement) (other : Measurement) = 
+            let AccumulateAndIntersectPlacement   (orientation : StackOrientation) (placement : Placement) (other : Measurement) =
                 match orientation with
                 | FromLeft  -> let intersected  = Placement.New placement.X placement.Y (Intersect placement.Width other.Width) placement.Height
                                let adjusted     = Placement.New (placement.X + intersected.Width) placement.Y (Clamp <| placement.Width - intersected.Width) placement.Height
@@ -753,17 +759,17 @@ module public Logical =
                 | FromTop   -> let intersected  = Placement.New placement.X placement.Y placement.Width (Intersect placement.Height other.Height)
                                let adjusted     = Placement.New placement.X (placement.Y + intersected.Height) placement.Width (Clamp <| placement.Height - intersected.Height)
                                adjusted,intersected
-                | FromBottom-> let adjusted     = Placement.New placement.X placement.Y placement.Width (Subtract placement.Height other.Height) 
-                               let intersected  = Placement.New placement.X (placement.Y + adjusted.Height) placement.Width (Clamp <| placement.Height - adjusted.Height) 
+                | FromBottom-> let adjusted     = Placement.New placement.X placement.Y placement.Width (Subtract placement.Height other.Height)
+                               let intersected  = Placement.New placement.X (placement.Y + adjusted.Height) placement.Width (Clamp <| placement.Height - adjusted.Height)
                                adjusted,intersected
-                
-            static let Persistent id valueChanged value = Property.Persistent<StackElement, _>  id valueChanged value 
+
+            static let Persistent id valueChanged value = Property.Persistent<StackElement, _>  id valueChanged value
 
             static let orientation      = Persistent "Orientation"     InvalidateMeasurement    <| Value StackOrientation.FromTop
 
             static member Orientation   = orientation
 
-            override x.OnMeasureContent a   = 
+            override x.OnMeasureContent a   =
                         let orientation = x.Get StackElement.Orientation
 
                         let mutable measurement = Measurement.Zero
@@ -775,10 +781,10 @@ module public Logical =
 
                             measurement <- AccumulateMeasurement orientation measurement cm
 //                            remaining   <- SubtractAvailable orientation remaining cm
-    
+
                         measurement
-    
-            override x.OnPlaceElement o i   = 
+
+            override x.OnPlaceElement o i   =
                         let orientation = x.Get StackElement.Orientation
 
                         let mutable placement = i
@@ -792,32 +798,32 @@ module public Logical =
                                 let a,i = AccumulateAndIntersectPlacement orientation placement m
                                 c.PlaceElement i
                                 placement <- a
-    
+
                         ()
 
         [<AbstractClass>]
         type TextElement() =
             inherit Element()
 
-            static let Persistent id valueChanged value = Property.Persistent<TextElement, _> id valueChanged value 
+            static let Persistent id valueChanged value = Property.Persistent<TextElement, _> id valueChanged value
 
-            static let text             = Persistent     "Text"        InvalidateMeasurement  <| Value ""              
+            static let text             = Persistent     "Text"        InvalidateMeasurement  <| Value ""
 
             static member Text          = text
 
         type LabelElement() =
             inherit TextElement()
 
-            override x.OnMeasureContent a = 
+            override x.OnMeasureContent a =
                         let context = x.Context
                         match context with
                         | None          -> Debug.Assert false; Measurement.Fill
-                        | Some context  -> 
+                        | Some context  ->
                             let text = x.Get TextElement.Text
                             if text.Length = 0 then Measurement.Zero
                             else
-                                let tfd = x.Get Element.TextFormatDescriptor
-                                let size = context.MeasureText tfd (a.ToSize2F ()) text
+                                let key     = x.Get Element.TextFormatKey
+                                let size    = context.MeasureText key (a.ToSize2F ()) text
                                 Measurement.FromSize2 size
 
 
@@ -825,14 +831,12 @@ module public Logical =
                                        (i : Placement) =
                             let text = x.Get TextElement.Text
                             if text = "" then VisualTree.NoVisual
-                            else 
-                                let foreground = x.Get Element.Foreground
-                                let fontFamily = x.Get Element.FontFamily
-                                let fontSize = x.Get Element.FontSize
-                                let textFormatDescriptor = TextFormatDescriptor.New fontFamily fontSize
+                            else
+                                let foreground              = x.Get Element.Foreground
+                                let key                     = x.Get Element.TextFormatKey
                                 let layoutRect = i.ToRectangleF () |> Animated.Constant
-                                VisualTree.Text (text, textFormatDescriptor, layoutRect, foreground |> Animated.Brush.Opaque)
-    
+                                VisualTree.Text (text, key, layoutRect, foreground |> Animated.Brush.Opaque)
+
         type ButtonState =
             | Normal
             | Highlighted
@@ -841,15 +845,15 @@ module public Logical =
         type ButtonElement() =
             inherit DecoratorElement()
 
-            static let Persistent   id valueChanged value   = Property.Persistent<ButtonElement, _> id valueChanged value 
+            static let Persistent   id valueChanged value   = Property.Persistent<ButtonElement, _> id valueChanged value
             static let Routed       id sample               = Event.Routed<ButtonElement, _> id sample
 
             static let buttonState       = Persistent    "ButtonState"      InvalidateVisual        <| Value ButtonState.Normal
-                   
+
             static let highlight         = Persistent    "Highlight"        InvalidateVisual        <| Value (SolidBrush Color.Purple      )
             static let pressed           = Persistent    "Pressed"          InvalidateVisual        <| Value (SolidBrush Color.LightBlue   )
             static let border            = Persistent    "Border"           InvalidateVisual        <| Value (SolidBrush Color.White       )
-            static let borderThickness   = Persistent    "BorderThickness"  InvalidateMeasurement   <| Value 2.0F           
+            static let borderThickness   = Persistent    "BorderThickness"  InvalidateMeasurement   <| Value 2.0F
 
             static let clicked           = Routed        "Clicked"          ()
 
@@ -857,11 +861,11 @@ module public Logical =
                 Element.Foreground.Override<ButtonElement> (Some <| Value (SolidBrush Color.White)) None
                 Element.Background.Override<ButtonElement> (Some <| Value (SolidBrush Color.Black)) None
 
-            static member ButtonState       = buttonState    
+            static member ButtonState       = buttonState
 
-            static member Highlight         = highlight      
-            static member Pressed           = pressed        
-            static member Border            = border         
+            static member Highlight         = highlight
+            static member Pressed           = pressed
+            static member Border            = border
             static member BorderThickness   = borderThickness
 
             static member Clicked           = clicked
@@ -876,31 +880,31 @@ module public Logical =
                             let borderThickness = x.Get ButtonElement.BorderThickness
                             let border          = x.Get ButtonElement.Border
 
-                            let background = 
+                            let background =
                                 match state with
                                 | Normal        -> x.Get ButtonElement.Background
                                 | Highlighted   -> x.Get ButtonElement.Highlight
                                 | Pressed       -> x.Get ButtonElement.Pressed
                             VisualTree.Rectangle (
-                                border |> Animated.Brush.Opaque     , 
-                                background |> Animated.Brush.Opaque , 
-                                r |> Animated.Constant              , 
+                                border |> Animated.Brush.Opaque     ,
+                                background |> Animated.Brush.Opaque ,
+                                r |> Animated.Constant              ,
                                 borderThickness |> Animated.Constant
                                 )
-    
-    module Properties = 
+
+    module Properties =
 
         open Foundation
         open Standard
 
-        let Bounds          = Element.Bounds              
-        let IsVisible       = Element.IsVisible           
-        let Margin          = Element.Margin              
-        let FontFamily      = Element.FontFamily          
-        let FontSize        = Element.FontSize            
-        let Background      = Element.Background          
-        let Foreground      = Element.Foreground          
-    
+        let Bounds          = Element.Bounds
+        let IsVisible       = Element.IsVisible
+        let Margin          = Element.Margin
+        let FontFamily      = Element.FontFamily
+        let FontSize        = Element.FontSize
+        let Background      = Element.Background
+        let Foreground      = Element.Foreground
+
         let Padding         = ContainerElement.Padding
 
         let Child           = DecoratorElement.Child
@@ -909,7 +913,7 @@ module public Logical =
 
         let Text            = TextElement.Text
 
-    module Events = 
+    module Events =
 
         open Foundation
         open Standard
@@ -923,19 +927,19 @@ module public Logical =
 
     let SomeElement (e : #Element) = Some (e :> Element)
 
-    let ( >>+ ) (e : #Element) (el : EventListener<'T>) = 
+    let ( >>+ ) (e : #Element) (el : EventListener<'T>) =
                     ignore <| el.SetListener e
                     e
-    let ( >>- ) (e : #Element) (el : EventListener<'T>) = 
+    let ( >>- ) (e : #Element) (el : EventListener<'T>) =
                     ignore <| el.ClearListener e
                     e
 
-    let CreateElement<'T when 'T :> Element and 'T : (new: unit -> 'T)> (pvs : PropertyValue list) = 
+    let CreateElement<'T when 'T :> Element and 'T : (new: unit -> 'T)> (pvs : PropertyValue list) =
         let element = new 'T()
         element.AssignFromPropertyValues pvs
         element
 
-    let CreateContainer<'T when 'T :> LayoutElement and 'T : (new: unit -> 'T)> (pvs : PropertyValue list) (children : Element list) = 
+    let CreateContainer<'T when 'T :> LayoutElement and 'T : (new: unit -> 'T)> (pvs : PropertyValue list) (children : Element list) =
         let layout = CreateElement<'T> pvs
         let mutable i = 0
         for child in children do
@@ -949,6 +953,6 @@ module public Logical =
 
     let Button (pvs : PropertyValue list) = CreateElement<ButtonElement> pvs
 
-    let TextButton text (pvs : PropertyValue list) = 
+    let TextButton text (pvs : PropertyValue list) =
         let pv : PropertyValue = upcast Properties.Child.Value (SomeElement <| Label [ Properties.Text.Value text])
         Button <| pv::pvs

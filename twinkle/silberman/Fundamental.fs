@@ -6,7 +6,7 @@ open System
 open System.Collections.Generic
 open System.Threading
 
-module public Fundamental = 
+module public Fundamental =
 
 //    [<Measure>]
 //    type Columns
@@ -16,11 +16,11 @@ module public Fundamental =
     type GeometryKey            = int
     type TransformedGeometryKey = int
     type Time                   = float32
-    
+
     let CurrentTime () : Time = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
 
     [<Flags>]
-    type MouseButtonStates = 
+    type MouseButtonStates =
         | Empty     = 0x000
         | Left      = 0x001
         | Middle    = 0x002
@@ -28,7 +28,7 @@ module public Fundamental =
 
     [<NoEquality>]
     [<NoComparison>]
-    type MouseState = 
+    type MouseState =
         {
             ButtonState : MouseButtonStates
             Coordinate  : Vector2
@@ -40,7 +40,7 @@ module public Fundamental =
 
     [<NoEquality>]
     [<NoComparison>]
-    type ApplicationState = 
+    type ApplicationState =
         {
             CurrentTime     : Time
             CurrentMouse    : MouseState
@@ -52,7 +52,7 @@ module public Fundamental =
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type ColorDescriptor = 
+    type ColorDescriptor =
         {
             Alpha   : float32
             Red     : float32
@@ -89,7 +89,7 @@ module public Fundamental =
         | EquilateralTriangle
         | Triangle45x45x90
         | UnitSquare
-          
+
     type AnimationEase      = Time->Time->float32->float32->ApplicationState->float32
 
     type AnimatedFloat      = ApplicationState->float32
@@ -116,61 +116,61 @@ module public Fundamental =
 
         member x.IsZero with get () = x = Thickness.Zero
 
-        static member ( + ) (l : Thickness, r : Thickness) = 
-                            Thickness.New 
+        static member ( + ) (l : Thickness, r : Thickness) =
+                            Thickness.New
                                 (l.Left      + r.Left   )
                                 (l.Top       + r.Top    )
                                 (l.Right     + r.Right  )
                                 (l.Bottom    + r.Bottom )
 
-        static member ( ~- ) (t : Thickness) = 
-                            Thickness.New 
-                                -t.Left      
-                                -t.Top       
-                                -t.Right     
-                                -t.Bottom    
+        static member ( ~- ) (t : Thickness) =
+                            Thickness.New
+                                -t.Left
+                                -t.Top
+                                -t.Right
+                                -t.Bottom
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type MeasurementUnit = 
+    type MeasurementUnit =
         | FixedMeasurement  of float32
         | Fill
 
         static member Zero = FixedMeasurement 0.F
 
-        static member ( + ) (l : MeasurementUnit, r : float32) = 
+        static member ( + ) (l : MeasurementUnit, r : float32) =
             match l with
             | FixedMeasurement  v   -> MeasurementUnit.Clamp <| FixedMeasurement (v + r)
             | Fill                  -> Fill
         static member ( - ) (l : MeasurementUnit, r : float32) = l + (-r)
 
-        static member ( + ) (l : MeasurementUnit, r : MeasurementUnit) = 
+        static member ( + ) (l : MeasurementUnit, r : MeasurementUnit) =
             match l,r with
             | FixedMeasurement l, FixedMeasurement r    -> MeasurementUnit.Clamp <| FixedMeasurement (l + r)
             | _                 , _                     -> Fill
 
-        static member ( - ) (l : MeasurementUnit, r : MeasurementUnit) = 
+        static member ( - ) (l : MeasurementUnit, r : MeasurementUnit) =
             match l,r with
             | FixedMeasurement l, FixedMeasurement r    -> MeasurementUnit.Clamp <| FixedMeasurement (l - r)
             | FixedMeasurement _, Fill                  -> MeasurementUnit.Zero
             | _                 , _                     -> Fill
 
-        member x.Union (o : MeasurementUnit) = 
+        member x.Union (o : MeasurementUnit) =
             match x,o with
             | Fill              , _                     -> Fill
             | _                 , Fill                  -> Fill
             | FixedMeasurement l, FixedMeasurement r    -> MeasurementUnit.Clamp <| FixedMeasurement (max l r)
 
-        static member FromFloat32 (v : float32) = 
+        static member FromFloat32 (v : float32) =
             match v with
             | IsPositiveInfinity    -> Fill
             | IsPositive            -> FixedMeasurement v
             | _                     -> FixedMeasurement 0.F
-            
-        static member Clamp (x : MeasurementUnit) =  
+
+        static member Clamp (x : MeasurementUnit) =
                 match x with
                 | Fill              -> Fill
-                | FixedMeasurement m-> 
+                | FixedMeasurement m->
                     match m with
                     | IsPositiveInfinity    -> Fill
                     | IsPositive            -> FixedMeasurement m
@@ -179,7 +179,7 @@ module public Fundamental =
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type Measurement = 
+    type Measurement =
         {
             Width   : MeasurementUnit
             Height  : MeasurementUnit
@@ -190,67 +190,67 @@ module public Fundamental =
 
         static member FromSize2 (sz : Size2F) = Measurement.New (MeasurementUnit.FromFloat32 sz.Width) (MeasurementUnit.FromFloat32 sz.Height)
 
-        static member ( + ) (l : Measurement, r : Thickness) = 
+        static member ( + ) (l : Measurement, r : Thickness) =
                             Measurement.New
                                 (l.Width    + (r.Left + r.Right ))
                                 (l.Height   + (r.Top  + r.Bottom))
 
-        static member ( - ) (l : Measurement, r : Thickness) = 
+        static member ( - ) (l : Measurement, r : Thickness) =
                             Measurement.New
                                 (l.Width    - (r.Left + r.Right ))
                                 (l.Height   - (r.Top  + r.Bottom))
 
-        member x.Union (o : Measurement) = 
-            Measurement.New 
+        member x.Union (o : Measurement) =
+            Measurement.New
                 (x.Width.Union  o.Width )
                 (x.Height.Union o.Height)
 
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type AvailableUnit = 
+    type AvailableUnit =
         | Unbound
-        | Bound     of float32 
+        | Bound     of float32
 
         static member Zero = Bound 0.F
 
-        static member ( + ) (l : AvailableUnit, r : float32) = 
+        static member ( + ) (l : AvailableUnit, r : float32) =
             match l with
             | Unbound   -> Unbound
             | Bound v   -> AvailableUnit.Clamp <| Bound (v + r)
         static member ( - ) (l : AvailableUnit, r : float32) = l + (-r)
 
-        static member ( + ) (l : AvailableUnit, r : MeasurementUnit) = 
+        static member ( + ) (l : AvailableUnit, r : MeasurementUnit) =
             match l,r with
             | Bound l, FixedMeasurement r -> AvailableUnit.Clamp <| Bound (l + r)
             | _      , _                  -> Unbound
 
-        static member ( - ) (l : AvailableUnit, r : MeasurementUnit) = 
+        static member ( - ) (l : AvailableUnit, r : MeasurementUnit) =
             match l,r with
             | Bound l, FixedMeasurement r -> AvailableUnit.Clamp <| Bound (l - r)
             | Bound _, Fill               -> AvailableUnit.Zero
             | _      , _                  -> Unbound
 
-        member x.Max (o : AvailableUnit) = 
+        member x.Max (o : AvailableUnit) =
             match x,o with
             | Bound xx  , Bound yy  -> AvailableUnit.Clamp <| Bound (max xx yy)
             | _         , _         -> Unbound
 
-        member x.IsMeasurementValid (measurement : MeasurementUnit) = 
+        member x.IsMeasurementValid (measurement : MeasurementUnit) =
                 match x,measurement with
                 | Unbound   , _                 -> true
                 | Bound _   , Fill              -> true
                 | Bound b   , FixedMeasurement v-> b >= v
 
-        member x.ToFloat32 () = 
-                match x with 
+        member x.ToFloat32 () =
+                match x with
                 | Unbound   -> Single.PositiveInfinity
                 | Bound b   -> b
 
-        static member Clamp (x : AvailableUnit) =  
+        static member Clamp (x : AvailableUnit) =
                 match x with
                 | Unbound       -> Unbound
-                | Bound m       -> 
+                | Bound m       ->
                     match m with
                     | IsPositiveInfinity    -> Unbound
                     | IsPositive            -> Bound m
@@ -258,7 +258,7 @@ module public Fundamental =
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type Available = 
+    type Available =
         {
             Width   : AvailableUnit
             Height  : AvailableUnit
@@ -269,12 +269,12 @@ module public Fundamental =
 
         member x.IsZero with get ()     = x = Available.Zero
 
-        static member ( + ) (l : Available, r : Thickness) = 
+        static member ( + ) (l : Available, r : Thickness) =
                             Available.New
                                 (l.Width    + (r.Left + r.Right ))
                                 (l.Height   + (r.Top  + r.Bottom))
 
-        static member ( - ) (l : Available, r : Thickness) = l + (-r)     
+        static member ( - ) (l : Available, r : Thickness) = l + (-r)
 
         member x.IsMeasurementValid (m : Measurement)   = x.Width.IsMeasurementValid m.Width && x.Height.IsMeasurementValid m.Height
 
@@ -299,14 +299,14 @@ module public Fundamental =
 
         member x.ToRectangleF () = RectangleF(x.X, x.Y, x.Width, x.Height)
 
-        static member ( + ) (l : Placement, r : Thickness) = 
+        static member ( + ) (l : Placement, r : Thickness) =
                             Placement.New
                                 (l.X - r.Left                               )
                                 (l.Y - r.Top                                )
                                 (Clamp <| l.Width     + r.Left+ r.Right   )
                                 (Clamp <| l.Height    + r.Top + r.Bottom  )
 
-        static member ( - ) (l : Placement, r : Thickness) = 
+        static member ( - ) (l : Placement, r : Thickness) =
                             Placement.New
                                 (l.X + r.Left                               )
                                 (l.Y + r.Top                                )
@@ -316,22 +316,22 @@ module public Fundamental =
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type PositionUnit = 
+    type PositionUnit =
         | MinPos
         | MaxPos
-        static member Clamp (x : PositionUnit) = x 
+        static member Clamp (x : PositionUnit) = x
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type SizeUnit = 
+    type SizeUnit =
         | MinSize
         | MaxSize
         | FixedSize of float32
-        static member Clamp (x : SizeUnit) =  
+        static member Clamp (x : SizeUnit) =
                 match x with
                 | MinSize       -> MinSize
                 | MaxSize       -> MaxSize
-                | FixedSize m   -> 
+                | FixedSize m   ->
                     match m with
                     | IsPositiveInfinity    -> MaxSize
                     | IsPositive            -> FixedSize m
@@ -339,7 +339,7 @@ module public Fundamental =
 
     [<StructuralEquality>]
     [<StructuralComparison>]
-    type Bounds = 
+    type Bounds =
         {
             X       : PositionUnit
             Y       : PositionUnit
@@ -352,12 +352,12 @@ module public Fundamental =
         static member MaxMin = Bounds.New MaxPos MaxPos MinSize MinSize
         static member MaxMax = Bounds.New MaxPos MaxPos MaxSize MaxSize
 
-        member x.AdjustMeasurement (a : Available) (m : Measurement) = 
+        member x.AdjustMeasurement (a : Available) (m : Measurement) =
                     let ww = x.AdjustMeasurementUnit a.Width  x.X x.Width  m.Width
                     let hh = x.AdjustMeasurementUnit a.Height x.Y x.Height m.Height
                     Measurement.New ww hh
-        
-        member private x.AdjustMeasurementUnit asize bpos bsize msize = 
+
+        member private x.AdjustMeasurementUnit asize bpos bsize msize =
                             match asize,bsize,msize with
                             | Unbound   , MinSize       , FixedMeasurement _ -> msize
                             | Bound b   , MinSize       , FixedMeasurement m -> FixedMeasurement <| min b m
@@ -365,13 +365,13 @@ module public Fundamental =
                             | Bound b   , FixedSize s   , _                  -> FixedMeasurement <| min b s
                             | _         , _             , _                  -> Fill
 
-        member x.AdjustPlacement (m : Measurement) (p : Placement) = 
-                    let xx,ww = x.AdjustPlacementUnit m.Width  x.X x.Width  p.X p.Width  
-                    let yy,hh = x.AdjustPlacementUnit m.Height x.Y x.Height p.Y p.Height 
+        member x.AdjustPlacement (m : Measurement) (p : Placement) =
+                    let xx,ww = x.AdjustPlacementUnit m.Width  x.X x.Width  p.X p.Width
+                    let yy,hh = x.AdjustPlacementUnit m.Height x.Y x.Height p.Y p.Height
 
                     Placement.New xx yy ww hh
 
-        member private x.AdjustPlacementUnit msize bpos bsize ppos psize = 
+        member private x.AdjustPlacementUnit msize bpos bsize ppos psize =
                             match msize,bpos,bsize with
                             | FixedMeasurement m, MinPos        , MinSize    -> ppos,min m psize
                             | FixedMeasurement m, MaxPos        , MinSize    -> let size = min m psize
@@ -381,10 +381,10 @@ module public Fundamental =
                                                                                 ppos + psize - size,size
                             | _                 , _             , _          -> ppos,psize
 
-    
+
     type BlockingQueue<'T>() =
         let safe    = obj()
-        let queue   = Queue<'T>()                                            
+        let queue   = Queue<'T>()
 
         member x.Enqueue (v : 'T) =
             Monitor.Enter safe
@@ -414,7 +414,7 @@ module public Fundamental =
                 let mutable cont = true
                 while cont do
                     if queue.Count > 0 then
-                        result <-   [|                
+                        result <-   [|
                                         while queue.Count > 0 do
                                             yield queue.Dequeue ()
                                     |]
@@ -433,7 +433,7 @@ module public Fundamental =
 
 
         member x.AsyncDequeue (timeOut : int) : Async<'T array> =
-            let dequeue ct =    Async.FromContinuations <| fun (cont, econt, ccont) -> 
+            let dequeue ct =    Async.FromContinuations <| fun (cont, econt, ccont) ->
                                     try
                                         let d = x.TryDequeue timeOut ct
                                         if not ct.IsCancellationRequested then
@@ -445,17 +445,17 @@ module public Fundamental =
             async.Bind(Async.CancellationToken,dequeue)
 
 [<AutoOpen>]
-module FundamentalAutoOpen = 
+module FundamentalAutoOpen =
 
     open Fundamental
 
-    let ( .*. ) (l : AnimatedMatrix) (r : AnimatedMatrix) : AnimatedMatrix = 
+    let ( .*. ) (l : AnimatedMatrix) (r : AnimatedMatrix) : AnimatedMatrix =
         fun time -> let left    = l time
                     let right   = r time
                     Matrix3x2.Multiply (left, right)
 
     type MouseButtonStates with
-        
+
         member x.Union      (o : MouseButtonStates) = x ||| o
         member x.Intersect  (o : MouseButtonStates) = x &&& o
         member x.Difference (o : MouseButtonStates) = x &&& ~~~o

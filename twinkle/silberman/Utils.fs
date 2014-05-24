@@ -22,7 +22,7 @@ module internal UtilsAutoOpen =
 
     let CurrentTimeInMs () = GlobalClock.ElapsedMilliseconds
 
-    let inline (|IsNaN|IsPositiveInfinity|IsNegativeInfinity|IsNegative|IsPositive|) (v : float32) = 
+    let inline (|IsNaN|IsPositiveInfinity|IsNegativeInfinity|IsNegative|IsPositive|) (v : float32) =
         if      Single.IsNaN                v then IsNaN
         elif    Single.IsPositiveInfinity   v then IsPositiveInfinity
         elif    Single.IsNegativeInfinity   v then IsNegativeInfinity
@@ -39,7 +39,7 @@ module internal UtilsAutoOpen =
         | IsPositiveInfinity    -> v
         | IsPositive            -> v
         | _                     -> 0.F
-    
+
     let IsNear a b = (abs <| a - b) < 0.0001F
 
     let IsIdentity (m : Matrix3x2) =
@@ -49,8 +49,8 @@ module internal UtilsAutoOpen =
         IsNear 1.0F m.M22   &&
         IsNear 0.0F m.M31   &&
         IsNear 0.0F m.M32
-         
-        
+
+
 
     let Log             (message  : string)= printfn "Information : %s" message
     let LogWarning      (message  : string)= printfn "Warning     : %s" message
@@ -64,7 +64,7 @@ module internal UtilsAutoOpen =
 
     let Normalize (v : Vector2) = v.Normalize(); v
 
-    let TryDispose (disposabe : IDisposable) = 
+    let TryDispose (disposabe : IDisposable) =
         try
             if disposabe <> null then disposabe.Dispose ()
         with
@@ -74,14 +74,14 @@ module internal UtilsAutoOpen =
         for v in s do
             TryDispose v
 
-    let TryRun (action : unit -> unit) = 
+    let TryRun (action : unit -> unit) =
         try
             action()
         with
         | exn -> printfn "Caught exception: %A" exn
 
 
-    type Disposable(action : unit->unit) = 
+    type Disposable(action : unit->unit) =
         interface IDisposable with
             member x.Dispose() = TryRun action
 
@@ -89,37 +89,37 @@ module internal UtilsAutoOpen =
 
     let AsNullable value = Nullable<_>(value)
 
-    let CompareAndExchange<'T when 'T : not struct> (f : 'T -> 'T) (valueReference : 'T ref) = 
+    let CompareAndExchange<'T when 'T : not struct> (f : 'T -> 'T) (valueReference : 'T ref) =
         while let value = !valueReference in not (Object.ReferenceEquals (Interlocked.CompareExchange (valueReference, f value, value), value)) do
             ()
 
-    let DispatchAction (control : Control) (action : unit->unit) = 
+    let DispatchAction (control : Control) (action : unit->unit) =
         let a = Action action
         ignore <| control.BeginInvoke(a)
 
-    let DefaultTo (optional : 'T option) (defaultValue : 'T) = 
+    let DefaultTo (optional : 'T option) (defaultValue : 'T) =
         match optional with
         | Some v    -> v
         | _         -> defaultValue
 
-    let CastTo<'T> (o : obj) (defaultValue : 'T) = 
+    let CastTo<'T> (o : obj) (defaultValue : 'T) =
         match o with
         | :? 'T as v    -> v
         | _             -> defaultValue
-        
-    let As<'T> (o : obj) = 
+
+    let As<'T> (o : obj) =
         match o with
         | :? 'T as v    -> Some v
         | _             -> None
-        
-    let Is<'T> (o : obj) = 
+
+    let Is<'T> (o : obj) =
         match o with
         | :? 'T         -> true
         | _             -> false
-        
 
-    let DisposeWith (l : #IDisposable) (r : #IDisposable) = 
-        OnExit <| fun () -> 
+
+    let DisposeWith (l : #IDisposable) (r : #IDisposable) =
+        OnExit <| fun () ->
                     TryDispose l
                     r.Dispose ()
 
@@ -129,15 +129,15 @@ module internal UtilsAutoOpen =
     let inline ( <??> ) optional defaultValue = DefaultTo optional defaultValue
     let inline ( <???> ) o defaultValue = CastTo o defaultValue
 
-    type IDisposable with 
-        member x.DisposeWith (o : IDisposable) = DisposeWith x o            
+    type IDisposable with
+        member x.DisposeWith (o : IDisposable) = DisposeWith x o
 
-    type Matrix3x2 with 
-        member x.Multiply (o : Matrix3x2) = Matrix3x2.Multiply(x,o) 
+    type Matrix3x2 with
+        member x.Multiply (o : Matrix3x2) = Matrix3x2.Multiply(x,o)
         member x.TransformPoint (p : Vector2) = Matrix3x2.TransformPoint(x,p)
 
-    type Type with 
-        member x.Ancestors () = 
+    type Type with
+        member x.Ancestors () =
             let t = ref x
             seq {
                 while !t <> null do
@@ -149,7 +149,7 @@ module internal UtilsAutoOpen =
         member x.Union (other : RectangleF) =
             if x.IsEmpty then other
             elif other.IsEmpty then x
-            else 
+            else
                 let left    = min x.Left    other.Left
                 let top     = min x.Top     other.Top
                 let right   = max x.Right   other.Right
@@ -162,18 +162,18 @@ module internal UtilsAutoOpen =
         member x.Is<'T> () = Is<'T> x
 
     type IDictionary<'TKey, 'TValue> with
-        member x.Lookup (key : 'TKey) (defaultValue : 'TValue) =  
+        member x.Lookup (key : 'TKey) (defaultValue : 'TValue) =
                     let v = RefOf<'TValue>
                     if x.TryGetValue(key, v) then !v
                     else defaultValue
 
 
-        member x.Find (key : 'TKey) : 'TValue option =  
+        member x.Find (key : 'TKey) : 'TValue option =
                     let v = RefOf<'TValue>
                     if x.TryGetValue(key, v) then Some !v
                     else None
 
-        member x.GetOrAdd (key : 'TKey, creator : 'TKey -> 'TValue) = 
+        member x.GetOrAdd (key : 'TKey, creator : 'TKey -> 'TValue) =
                     let v = RefOf<'TValue>
                     if x.TryGetValue(key, v) then !v
                     else
@@ -181,23 +181,23 @@ module internal UtilsAutoOpen =
                         x.Add (key, !v)
                         !v
 
-    let ToDictionary (l : seq<'TKey*'TValue>) = 
+    let ToDictionary (l : seq<'TKey*'TValue>) =
         let d = Dictionary<'TKey, 'TValue> ()
         for k,v in l do
             d.[k] <- v
         d
-                                                
-    let ToConcurrentDictionary (l : seq<'TKey*'TValue>) = 
+
+    let ToConcurrentDictionary (l : seq<'TKey*'TValue>) =
         let d = ConcurrentDictionary<'TKey, 'TValue> ()
         for k,v in l do
             ignore <| d.TryAdd (k,v)
         d
 
-module internal Async = 
-    let SwitchToThread2 (state : ApartmentState) (tp : ThreadPriority): Async<unit> = 
-        Async.FromContinuations <| fun (cont, econt, ccont) -> 
+module internal Async =
+    let SwitchToThread2 (state : ApartmentState) (tp : ThreadPriority): Async<unit> =
+        Async.FromContinuations <| fun (cont, econt, ccont) ->
                 try
-                    let thread = Thread(fun () -> 
+                    let thread = Thread(fun () ->
                                     try
                                         cont ()
                                     with
@@ -209,4 +209,3 @@ module internal Async =
                     thread.Start ()
                 with
                 | e -> econt e
-    

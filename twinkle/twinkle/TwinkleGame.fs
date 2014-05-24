@@ -348,7 +348,7 @@ module TwinkleGame =
                 async {
                     do! Async.SwitchToNewThread ()
                     while true do
-                        let! messages = fromVisual.AsyncDequeue 100
+                        let! messages = fromVisual.AsyncDequeue 1000
 
                         for message in messages do
                             match message with

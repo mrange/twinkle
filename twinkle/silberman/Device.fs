@@ -212,8 +212,6 @@ module internal Device =
                 | Transparent       -> null
                 | SolidColor c      -> upcast Solid c
 
-        let brushCache = Dictionary<BrushDescriptor, Direct2D1.Brush>()
-
         let geometryCache =
                 [
                     EquilateralTriangle     , DrawPathGeometryFromVertices
@@ -299,10 +297,6 @@ module internal Device =
         interface IDisposable with
             member x.Dispose() =
 
-                let bc = brushCache.ToArray()
-                brushCache.Clear()
-                for kv in bc do
-                    TryDispose kv.Value
                 TryDispose sharedResources
                 TryDispose d2dRenderTarget
                 TryDispose surface

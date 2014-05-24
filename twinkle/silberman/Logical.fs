@@ -234,35 +234,35 @@ module public Logical =
             let properties      = Dictionary<Property, obj>()
             let eventHandlers   = Dictionary<Event, obj>()
 
-            static let elementContext       = Persistent "ElementContext"  __NoAction               <| Value (None : ElementContext option)
+            static let elementContext               = Persistent "ElementContext"  __NoAction               <| Value (None : ElementContext option)
 
-            static let measurement          = Persistent "Measurement"     __NoAction               <| Value (None : Measurement option)
-            static let placement            = Persistent "Placement"       __NoAction               <| Value (None : Placement option)
-            static let visual               = Persistent "Visual"          __NoAction               <| Value (None : VisualTree option)
+            static let measurement                  = Persistent "Measurement"     __NoAction               <| Value (None : Measurement option)
+            static let placement                    = Persistent "Placement"       __NoAction               <| Value (None : Placement option)
+            static let visual                       = Persistent "Visual"          __NoAction               <| Value (None : VisualTree option)
 
-            static let bounds               = Persistent "Bounds"          __InvalidateMeasurement  <| Value Bounds.MinMin
-            static let isVisible            = Persistent "IsVisible"       __InvalidateMeasurement  <| Value true
+            static let bounds                       = Persistent "Bounds"          __InvalidateMeasurement  <| Value Bounds.MinMin
+            static let isVisible                    = Persistent "IsVisible"       __InvalidateMeasurement  <| Value true
 
-            static let margin               = Persistent "Margin"          __InvalidateMeasurement  <| Value Thickness.Zero
+            static let margin                       = Persistent "Margin"          __InvalidateMeasurement  <| Value Thickness.Zero
 
-            static let fontFamily           = Persistent "FontFamily"      __InvalidateTextFormatKey<| Value "Calibri"
-            static let fontSize             = Persistent "FontSize"        __InvalidateTextFormatKey<| Value 24.F
-            static let textFormatKey        = Persistent "TextFormatKey"   __InvalidateMeasurement  <| ValueCreator 
-                                                                                                        (fun e -> 
-                                                                                                            let context     = e.Context
-                                                                                                            let fontFamily  = e.Get fontFamily
-                                                                                                            let fontSize    = e.Get fontSize
-                                                                                                            match context with
-                                                                                                            | Some c    -> c.CreateTextFormat <| TextFormatDescriptor.New fontFamily fontSize
-                                                                                                            | _         -> InvalidId
-                                                                                                        )
+            static let fontFamily                   = Persistent "FontFamily"      __InvalidateTextFormatKey<| Value "Calibri"
+            static let fontSize                     = Persistent "FontSize"        __InvalidateTextFormatKey<| Value 24.F
+            static let textFormatKey                = Persistent "TextFormatKey"   __InvalidateMeasurement  <| ValueCreator 
+                                                                                                                (fun e -> 
+                                                                                                                    let context     = e.Context
+                                                                                                                    let fontFamily  = e.Get fontFamily
+                                                                                                                    let fontSize    = e.Get fontSize
+                                                                                                                    match context with
+                                                                                                                    | Some c    -> c.CreateTextFormat <| TextFormatDescriptor.New fontFamily fontSize
+                                                                                                                    | _         -> InvalidId
+                                                                                                                )
 
-            static let background, backgroundKey = Brush "Background" BrushDescriptor.Transparent
-            static let foreground, foregroundKey = Brush "Foreground" <| SolidBrush Color.Black
+            static let background, backgroundKey    = Brush "Background" BrushDescriptor.Transparent
+            static let foreground, foregroundKey    = Brush "Foreground" <| SolidBrush Color.Black
 
 
-            static let attached             = Routed        "Attached"      ()
-            static let detached             = Routed        "Detached"      ()
+            static let attached                     = Routed        "Attached"      ()
+            static let detached                     = Routed        "Detached"      ()
 
             abstract OnChildren     : unit -> Element array
 

@@ -165,7 +165,8 @@ module public App =
 
             let! ct = Async.CancellationToken
 
-            use sharedResources = new SharedResources ()
+            // Do not "use" (ie dispose) sharedResources, it will be managed by the device
+            let sharedResources = new SharedResources ()
 
             Async.StartImmediate <| formProcessor ct toui fromui sharedResources
 

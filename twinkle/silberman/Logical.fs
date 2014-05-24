@@ -259,6 +259,7 @@ module public Logical =
             static let __InvalidateMeasurement      (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateMeasurement   ()
             static let __InvalidatePlacement        (le : Element) (ov : 'T) (nv : 'T) = le.InvalidatePlacement     ()
             static let __InvalidateVisual           (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateVisual        ()
+            static let __InvalidateTextFormatKey    (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateTextFormatKey ()
 
             static let Persistent id valueChanged value = Property.Persistent<Element, _>   id valueChanged value
             static let Computed   id computeValue       = Property.Computed<Element, _>     id computeValue
@@ -280,8 +281,8 @@ module public Logical =
 
             static let margin               = Persistent "Margin"          __InvalidateMeasurement  <| Value Thickness.Zero
 
-            static let fontFamily           = Persistent "FontFamily"      __InvalidateMeasurement  <| Value "Calibri"
-            static let fontSize             = Persistent "FontSize"        __InvalidateMeasurement  <| Value 24.F
+            static let fontFamily           = Persistent "FontFamily"      __InvalidateTextFormatKey<| Value "Calibri"
+            static let fontSize             = Persistent "FontSize"        __InvalidateTextFormatKey<| Value 24.F
             static let textFormatKey        = Persistent "TextFormatKey"   __InvalidateMeasurement  <| ValueCreator 
                                                                                                         (fun e -> 
                                                                                                             let context     = e.Context
@@ -291,7 +292,6 @@ module public Logical =
                                                                                                             | Some c    -> c.CreateTextFormat <| TextFormatDescriptor.New fontFamily fontSize
                                                                                                             | _         -> 0
                                                                                                         )
-            //static let __InvalidateTextFormatKey    (le : Element) (ov : 'T) (nv : 'T)              = le.Clear textFormatKey
 
             static let background           = Persistent "Background"       __InvalidateVisual      <| Value BrushDescriptor.Transparent
             static let foreground           = Persistent "Foreground"       __InvalidateVisual      <| Value (SolidBrush Color.Black)
@@ -499,6 +499,9 @@ module public Logical =
                                match x.Parent with
                                | Some p -> p.InvalidateVisual ()
                                | None   -> ()
+
+            member private x.InvalidateTextFormatKey () =
+                x.Clear textFormatKey
 
             member x.EffectiveMargin                    = x.OnGetEffectiveMargin ()
 

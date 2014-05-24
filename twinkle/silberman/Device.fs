@@ -47,10 +47,10 @@ module internal Device =
 
     type SharedResources() =
         let key                             = ref 1
-        let brushes                         = ConcurrentDictionary<BrushKey                 , BrushDescriptor       * Direct2D1.Brush ref                           >()
-        let textFormats                     = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor  * DirectWrite.TextFormat ref                    >()
-        let geometries                      = ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        >()
-        let transformedGeometries           = ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref >()
+        let brushes                         = ConcurrentDictionary<BrushKey                 , BrushDescriptor                   * Direct2D1.Brush ref               >()
+        let textFormats                     = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor              * DirectWrite.TextFormat ref        >()
+        let geometries                      = ConcurrentDictionary<GeometryKey              , GeometryDescriptor                * Direct2D1.Geometry ref            >()
+        let transformedGeometries           = ConcurrentDictionary<TransformedGeometryKey   , (GeometryDescriptor* Matrix3x2)   * Direct2D1.TransformedGeometry ref >()
 
         let brushDescriptors                = ConcurrentDictionary<BrushDescriptor                  , BrushKey              >()
         let textFormatDescriptors           = ConcurrentDictionary<TextFormatDescriptor             , TextFormatKey         >()
@@ -60,10 +60,9 @@ module internal Device =
         let generateKey () = Interlocked.Increment key
 
         let getKey 
-            (resources  : ConcurrentDictionary<int, 'V> ) 
-            (keys       : ConcurrentDictionary<'D, int> ) 
-            (d          : 'D                            )
-            (creator    : unit->'V                      )
+            (resources  : ConcurrentDictionary<int, 'D*'V ref>  ) 
+            (keys       : ConcurrentDictionary<'D, int>         ) 
+            (d          : 'D                                    )
             : int =
 
             match keys.Find d with
@@ -73,32 +72,25 @@ module internal Device =
                     let key = generateKey ()
                     let r   = keys.TryAdd (d, key)
                     if r then 
-                        let ir = resources.TryAdd (key, creator ())
+                        let ir = resources.TryAdd (key, (d, ref null))
                         if ir then key
                         else failwith "Failed to insert new key into resource dictionary, as a new key is unique this is shouldn't happen"
                     else insertKey () 
                 insertKey ()
 
+        let freeResources (resources  : ConcurrentDictionary<int, 'D*'V ref>  ) = 
+            for kv in resources do
+                let d,r = kv.Value
+                let resource = !r
+                r := null
+                TryDispose resource
+
         interface IDisposable with
             member x.Dispose () =
-                let bs  = brushes.ToArray ()
-                let tfs = textFormats.ToArray ()
-                let gs  = geometries.ToArray ()
-                let tgs = transformedGeometries.ToArray ()
-
-                brushes.Clear ()
-                textFormats.Clear ()
-                geometries.Clear ()
-                transformedGeometries.Clear ()
-                brushDescriptors.Clear ()
-                textFormatDescriptors.Clear ()
-                geometryDescriptors.Clear ()
-                transformedGeometryDescriptors.Clear ()
-
-                bs  |> Seq.map (fun kv -> let _,b = kv.Value in !b)     |> TryDisposeSequence
-                tfs |> Seq.map (fun kv -> let _,tf = kv.Value in !tf)   |> TryDisposeSequence
-                gs  |> Seq.map (fun kv -> let _,g = kv.Value in !g)     |> TryDisposeSequence
-                tgs |> Seq.map (fun kv -> let _,_,tg = kv.Value in !tg) |> TryDisposeSequence
+                freeResources brushes
+                freeResources textFormats
+                freeResources geometries
+                freeResources transformedGeometries
 
         member x.Device_Brushes                 = brushes
         member x.Device_TextFormats             = textFormats
@@ -106,17 +98,17 @@ module internal Device =
         member x.Device_TransformedGeometries   = transformedGeometries
 
         member x.GetBrush                 (bd : BrushDescriptor)        : BrushKey      =
-                getKey brushes brushDescriptors bd <| fun () -> (bd, ref null)
+                getKey brushes brushDescriptors bd 
 
         member x.GetTextFormat            (tfd : TextFormatDescriptor)  : TextFormatKey =
-                getKey textFormats textFormatDescriptors tfd <| fun () -> (tfd, ref null)
+                getKey textFormats textFormatDescriptors tfd
 
         member x.GetGeometry              (gd : GeometryDescriptor)     : GeometryKey   =
-                getKey geometries geometryDescriptors gd <| fun () -> (gd, ref null)
+                getKey geometries geometryDescriptors gd
 
         member x.GetTransformedGeometry   (gd : GeometryDescriptor) (t : Matrix3x2) : GeometryKey =
                 let d = gd,t
-                getKey transformedGeometries transformedGeometryDescriptors d <| fun () -> (gd, t, ref null)
+                getKey transformedGeometries transformedGeometryDescriptors d
 
     [<AbstractClass>]
     type GenericDevice() =
@@ -278,8 +270,8 @@ module internal Device =
         override x.GetTransformedGeometry (key : TransformedGeometryKey) : Direct2D1.TransformedGeometry =
             let find = sharedResources.Device_TransformedGeometries.Find key
             match find with
-            | Some (geometryDescriptor, t, geometry) when !geometry <> null -> !geometry
-            | Some (geometryDescriptor, t, geometry) ->
+            | Some ((geometryDescriptor, t), geometry) when !geometry <> null -> !geometry
+            | Some ((geometryDescriptor, t), geometry) ->
                 geometry := new TransformedGeometry(d2dFactory, geometryCache.[geometryDescriptor], t)
                 !geometry
             | _ -> null
@@ -298,13 +290,12 @@ module internal Device =
 
         interface IDisposable with
             member x.Dispose() =
-                // Do not dispose sharedResources as it's passed from the outside
-                // TryDispose sharedResources
 
                 let bc = brushCache.ToArray()
                 brushCache.Clear()
                 for kv in bc do
                     TryDispose kv.Value
+                TryDispose sharedResources
                 TryDispose d2dRenderTarget
                 TryDispose surface
                 TryDispose backBuffer

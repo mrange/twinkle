@@ -11,6 +11,8 @@ module public Fundamental =
 //    [<Measure>]
 //    type Columns
 
+    let InvalidId               = 0
+
     type BrushKey               = int
     type TextFormatKey          = int
     type GeometryKey            = int
@@ -95,7 +97,7 @@ module public Fundamental =
     type AnimatedFloat      = ApplicationState->float32
     type AnimatedVector2    = ApplicationState->Vector2
     type AnimatedRectangleF = ApplicationState->RectangleF
-    type AnimatedBrush      = ApplicationState->BrushDescriptor*float32
+    type AnimatedBrush      = ApplicationState->BrushKey*float32
     type AnimatedMatrix     = ApplicationState->Matrix3x2
 
     type ThickessUnit = float32

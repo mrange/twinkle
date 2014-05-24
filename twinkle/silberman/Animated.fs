@@ -33,15 +33,15 @@ module public Animated =
         fun s -> RectangleF (x s,y s,w s,h s)
 
     module Brush =
-        let Opacity (ease : AnimationEase) (v : BrushDescriptor) b e (f : float32) (t : float32) : AnimatedBrush =
+        let Opacity (ease : AnimationEase) (v : BrushKey) b e (f : float32) (t : float32) : AnimatedBrush =
             let o = ease b e f t
             fun s -> v, o s
 
-        let Opaque (v : BrushDescriptor) : AnimatedBrush =
+        let Opaque (v : BrushKey) : AnimatedBrush =
             fun s -> v, 1.F
 
         let Transparent : AnimatedBrush =
-            fun s -> Transparent, 0.F
+            fun s -> InvalidId, 0.F
 
     module Matrix =
         let Rotation (ease : AnimationEase) b e (f : float32) (t : float32) : AnimatedMatrix =

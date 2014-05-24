@@ -248,12 +248,20 @@ module TwinkleGame =
                     Blue    , SolidBrush Color.Blue
                     Indigo  , SolidBrush Color.Indigo
                     Violet  , SolidBrush Color.Violet
-                ] |> Map.ofList
+                ]
 
-            let createVisualFacet (context : Foundation.ElementContext) (c : Cell) (x : int<X>) (y : int<Y>) (direction : Direction) =
+            let createVisualFacet 
+                (context    : Foundation.ElementContext ) 
+                (strokeKey  : BrushKey                  ) 
+                (overlayKey : BrushKey                  ) 
+                (fillKeys   : Map<TwinkleColor, BrushKey>   )
+                (c          : Cell                      ) 
+                (x          : int<X>                    ) 
+                (y          : int<Y>                    ) 
+                (direction  : Direction                 ) =
                 let v = c.Visual
-                let s = stroke                      |> Animated.Brush.Opaque
-                let f = fills.[c.GetColor direction]|> Animated.Brush.Opaque
+                let s = strokeKey                       |> Animated.Brush.Opaque
+                let f = fillKeys.[c.GetColor direction] |> Animated.Brush.Opaque
                 let r = float32 Math.PI * 2.0F / 4.0F + float32 Math.PI * 2.0F * (float32 <| DirectionToInt direction) / (float32 Facets)
                 let ft =
                     Matrix3x2.Rotation r                *
@@ -263,7 +271,12 @@ module TwinkleGame =
                 let key = context.CreateTransformedGeometry Triangle45x45x90 ft
                 VisualTree.TransformedGeometry (key, s, f, sw)
 
-            let createVisualOverlay (context : Foundation.ElementContext) (c : Cell) =
+            let createVisualOverlay 
+                (context    : Foundation.ElementContext ) 
+                (strokeKey  : BrushKey                  ) 
+                (overlayKey : BrushKey                  ) 
+                (fillKeys   : Map<TwinkleColor, BrushKey>   )
+                (c          : Cell                      ) =
                 let rect = RectangleF(-halfside, -halfside, side, side)
                 let v = c.Visual
                 let s = Animated.Brush.Transparent
@@ -273,10 +286,10 @@ module TwinkleGame =
                         if v.LeftButtonPressed && not leftButtonPressed then
                             fromVisual.Enqueue <| CellClicked c
                         v.LeftButtonPressed <- leftButtonPressed
-                        overlay, 0.5F
+                        overlayKey, 0.5F
                     else
                         v.LeftButtonPressed <- false
-                        Transparent, 0.F
+                        InvalidId, 0.F
 
                 let ft =
                     Matrix3x2.Scaling side
@@ -296,7 +309,12 @@ module TwinkleGame =
                             |> ShakeBoard random
                             |> UpdateVisual
 
-            let createVisual (context : Foundation.ElementContext) =
+            let createVisual 
+                (context    : Foundation.ElementContext     ) 
+                (strokeKey  : BrushKey                      ) 
+                (overlayKey : BrushKey                      ) 
+                (fillKeys   : Map<TwinkleColor, BrushKey>   )
+                =
                 let outerGroup = List<VisualTree>()
                 board |> VisitCells (fun c x y ->
                                         let innerGroup = List<VisualTree>()
@@ -312,11 +330,13 @@ module TwinkleGame =
                                             Matrix3x2.Translation (- halfside - side * float32 x, -halfside - side * float32 y)  *
                                             Matrix3x2.Rotation -r
 
-                                        innerGroup.Add <| createVisualFacet context c x y Left
-                                        innerGroup.Add <| createVisualFacet context c x y Up
-                                        innerGroup.Add <| createVisualFacet context c x y Right
-                                        innerGroup.Add <| createVisualFacet context c x y Down
-                                        innerGroup.Add <| createVisualOverlay context c
+                                        let facet = createVisualFacet context strokeKey overlayKey fillKeys c x y 
+
+                                        innerGroup.Add <| facet Left 
+                                        innerGroup.Add <| facet Up
+                                        innerGroup.Add <| facet Right
+                                        innerGroup.Add <| facet Down
+                                        innerGroup.Add <| createVisualOverlay context strokeKey overlayKey fillKeys c
 
                                         let g = VisualTree.Group <| innerGroup.ToArray ()
                                         let t = VisualTree.Transform (t,rt, g)
@@ -359,12 +379,19 @@ module TwinkleGame =
 
             override x.OnRenderContent  (o : Placement)
                                         (i : Placement) =
-                        let vt =    match visualTree with
-                                    | Some vt   ->  vt
-                                    | _         ->  let context = x.Context
-                                                    let vt = createVisual context.Value
-                                                    visualTree <- Some <| vt
-                                                    vt
+                        let vt =    match visualTree, x.Context with
+                                    | Some vt,_         ->  vt
+                                    | _, Some context   ->  
+                                        let strokeKey   =   context.CreateBrush stroke
+                                        let overlayKey  =   context.CreateBrush overlay
+                                        let fillKeys    =   fills 
+                                                            |> List.map (fun (k,v) -> k,context.CreateBrush v)
+                                                            |> Map.ofList
+
+                                        let vt          = createVisual context strokeKey overlayKey fillKeys
+                                        visualTree <- Some <| vt
+                                        vt
+                                    | _ -> VisualTree.NoVisual
                         VisualTree.Transform (transform, rtransform, vt)
 
     let Game (pvs : Foundation.PropertyValue list) = Logical.CreateElement<Elements.GameElement> pvs

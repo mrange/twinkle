@@ -46,7 +46,7 @@ module internal Device =
                     TryDispose kv.Value
 
     type SharedResources() =
-        let key                             = ref 1
+        let key                             = ref InvalidId
         let brushes                         = ConcurrentDictionary<BrushKey                 , BrushDescriptor                   * Direct2D1.Brush ref               >()
         let textFormats                     = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor              * DirectWrite.TextFormat ref        >()
         let geometries                      = ConcurrentDictionary<GeometryKey              , GeometryDescriptor                * Direct2D1.Geometry ref            >()
@@ -112,10 +112,10 @@ module internal Device =
 
     [<AbstractClass>]
     type GenericDevice() =
-        abstract member GetBrush                : BrushDescriptor*float32       -> Direct2D1.Brush
-        abstract member GetTextFormat           : TextFormatKey                 -> DirectWrite.TextFormat
-        abstract member GetGeometry             : GeometryKey                   -> Direct2D1.Geometry
-        abstract member GetTransformedGeometry  : TransformedGeometryKey        -> Direct2D1.TransformedGeometry
+        abstract member GetBrush                : BrushKey*float32          -> Direct2D1.Brush
+        abstract member GetTextFormat           : TextFormatKey             -> DirectWrite.TextFormat
+        abstract member GetGeometry             : GeometryKey               -> Direct2D1.Geometry
+        abstract member GetTransformedGeometry  : TransformedGeometryKey    -> Direct2D1.TransformedGeometry
 
 
     type WindowedDevice(form : Windows.RenderForm, sharedResources : SharedResources) =
@@ -237,11 +237,19 @@ module internal Device =
                                                 |]
                 ] |> ToDictionary
 
-        override x.GetBrush (bd : BrushDescriptor, opacity : float32) : Direct2D1.Brush =
-            if opacity > 0.F then
-                let b = brushCache.GetOrAdd(bd, CreateBrush)
-                b.Opacity <- opacity
-                b
+        override x.GetBrush (key : BrushKey, opacity : float32) : Direct2D1.Brush =
+            let find = sharedResources.Device_Brushes.Find key
+            let brush = 
+                match find with
+                | Some (_, brush) when !brush <> null -> !brush
+                | Some (brushDescriptor, brush) ->
+                    brush := CreateBrush brushDescriptor
+                    !brush
+                | _ -> null
+
+            if opacity > 0.F && brush <> null then
+                brush.Opacity <- opacity
+                brush
             else null
 
         member x.SharedResources    = sharedResources
@@ -251,7 +259,7 @@ module internal Device =
         override x.GetTextFormat (key : TextFormatKey) : DirectWrite.TextFormat =
             let find = sharedResources.Device_TextFormats.Find key
             match find with
-            | Some (textFormatDescriptor, textFormat) when !textFormat <> null -> !textFormat
+            | Some (_, textFormat) when !textFormat <> null -> !textFormat
             | Some (textFormatDescriptor, textFormat) ->
                 textFormat := directWrite.CreateTextFormat textFormatDescriptor
                 !textFormat
@@ -260,7 +268,7 @@ module internal Device =
         override x.GetGeometry (key : GeometryKey) : Direct2D1.Geometry =
             let find = sharedResources.Device_Geometries.Find key
             match find with
-            | Some (geometryDescriptor, geometry) when !geometry <> null -> !geometry
+            | Some (_, geometry) when !geometry <> null -> !geometry
             | Some (geometryDescriptor, geometry) ->
                 geometry := geometryCache.[geometryDescriptor]
                 !geometry
@@ -270,7 +278,7 @@ module internal Device =
         override x.GetTransformedGeometry (key : TransformedGeometryKey) : Direct2D1.TransformedGeometry =
             let find = sharedResources.Device_TransformedGeometries.Find key
             match find with
-            | Some ((geometryDescriptor, t), geometry) when !geometry <> null -> !geometry
+            | Some (_, geometry) when !geometry <> null -> !geometry
             | Some ((geometryDescriptor, t), geometry) ->
                 geometry := new TransformedGeometry(d2dFactory, geometryCache.[geometryDescriptor], t)
                 !geometry

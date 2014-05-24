@@ -206,10 +206,28 @@ module public Logical =
             static let __InvalidatePlacement        (le : Element) (ov : 'T) (nv : 'T) = le.InvalidatePlacement     ()
             static let __InvalidateVisual           (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateVisual        ()
             static let __InvalidateTextFormatKey    (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateTextFormatKey ()
+            static let __InvalidateBrushKey      bk (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateBrushKey bk
+
+            static let brushCreator 
+                (brushCreator   : string -> PropertyValueChanged<BrushDescriptor> -> PropertyDefaultValue<BrushDescriptor> -> PersistentProperty<BrushDescriptor>   ) 
+                (keyCreator     : string -> PropertyValueChanged<BrushKey> -> PropertyDefaultValue<BrushKey> -> PersistentProperty<BrushKey>                        ) 
+                (id             : string                                                                                                                            )
+                (brushDescriptor : BrushDescriptor                                                                                                                  ) =
+                let rec brush   = brushCreator id         (__InvalidateBrushKey brushKey)   <| Value brushDescriptor
+                and brushKey    = keyCreator (id+"Key") __InvalidateVisual                  <| ValueCreator 
+                                                                                                (fun e -> 
+                                                                                                    let context = e.Context
+                                                                                                    let brush   = e.Get brush
+                                                                                                    match context with
+                                                                                                    | Some c    -> c.CreateBrush brush
+                                                                                                    | _         -> InvalidId
+                                                                                                )
+                brush, brushKey
 
             static let Persistent id valueChanged value = Property.Persistent<Element, _>   id valueChanged value
             static let Computed   id computeValue       = Property.Computed<Element, _>     id computeValue
             static let Routed     id sample             = Event.Routed<Element, _>          id sample
+            static let Brush                            = brushCreator Persistent Persistent
 
             static let children : Element array = [||]
 
@@ -236,11 +254,11 @@ module public Logical =
                                                                                                             let fontSize    = e.Get fontSize
                                                                                                             match context with
                                                                                                             | Some c    -> c.CreateTextFormat <| TextFormatDescriptor.New fontFamily fontSize
-                                                                                                            | _         -> 0
+                                                                                                            | _         -> InvalidId
                                                                                                         )
 
-            static let background           = Persistent "Background"       __InvalidateVisual      <| Value BrushDescriptor.Transparent
-            static let foreground           = Persistent "Foreground"       __InvalidateVisual      <| Value (SolidBrush Color.Black)
+            static let background, backgroundKey = Brush "Background" BrushDescriptor.Transparent
+            static let foreground, foregroundKey = Brush "Foreground" <| SolidBrush Color.Black
 
 
             static let attached             = Routed        "Attached"      ()
@@ -378,6 +396,8 @@ module public Logical =
                                 parent <- None
                                 ignore <| x.RaiseEvent detached ()
 
+            static member BrushCreator          = brushCreator
+
             static member ElementContext        = elementContext
 
             static member Measurement           = measurement
@@ -393,7 +413,10 @@ module public Logical =
             static member FontSize              = fontSize
 
             static member Background            = background
+            static member BackgroundKey         = backgroundKey
+
             static member Foreground            = foreground
+            static member ForegroundKey         = foregroundKey
 
             static member TextFormatKey         = textFormatKey
 
@@ -446,8 +469,11 @@ module public Logical =
                                | Some p -> p.InvalidateVisual ()
                                | None   -> ()
 
-            member private x.InvalidateTextFormatKey () =
+            member x.InvalidateTextFormatKey () =
                 x.Clear textFormatKey
+
+            member x.InvalidateBrushKey (bk : PersistentProperty<BrushKey>) =
+                x.Clear bk
 
             member x.EffectiveMargin                    = x.OnGetEffectiveMargin ()
 
@@ -781,10 +807,10 @@ module public Logical =
                             let text = x.Get TextElement.Text
                             if text = "" then VisualTree.NoVisual
                             else
-                                let foreground              = x.Get Element.Foreground
+                                let foregroundKey           = x.Get Element.ForegroundKey
                                 let key                     = x.Get Element.TextFormatKey
                                 let layoutRect = i.ToRectangleF () |> Animated.Constant
-                                VisualTree.Text (text, key, layoutRect, foreground |> Animated.Brush.Opaque)
+                                VisualTree.Text (text, key, layoutRect, foregroundKey |> Animated.Brush.Opaque)
 
         type ButtonState =
             | Normal
@@ -796,15 +822,17 @@ module public Logical =
 
             static let Persistent   id valueChanged value   = Property.Persistent<ButtonElement, _> id valueChanged value
             static let Routed       id sample               = Event.Routed<ButtonElement, _> id sample
+            static let Brush                                = Element.BrushCreator Persistent Persistent
 
-            static let buttonState       = Persistent    "ButtonState"      InvalidateVisual        <| Value ButtonState.Normal
+            static let buttonState              = Persistent    "ButtonState"       InvalidateVisual        <| Value ButtonState.Normal
 
-            static let highlight         = Persistent    "Highlight"        InvalidateVisual        <| Value (SolidBrush Color.Purple      )
-            static let pressed           = Persistent    "Pressed"          InvalidateVisual        <| Value (SolidBrush Color.LightBlue   )
-            static let border            = Persistent    "Border"           InvalidateVisual        <| Value (SolidBrush Color.White       )
-            static let borderThickness   = Persistent    "BorderThickness"  InvalidateMeasurement   <| Value 2.0F
+            static let borderThickness          = Persistent    "BorderThickness"   InvalidateMeasurement   <| Value 2.0F
 
-            static let clicked           = Routed        "Clicked"          ()
+            static let highlight, highlightKey  = Brush         "Highlight"         <| SolidBrush Color.Purple       
+            static let pressed, pressedKey      = Brush         "Pressed"           <| SolidBrush Color.LightBlue   
+            static let border, borderKey        = Brush         "Border"            <| SolidBrush Color.White       
+
+            static let clicked                  = Routed        "Clicked"          ()
 
             static do
                 Element.Foreground.Override<ButtonElement> (Some <| Value (SolidBrush Color.White)) None
@@ -812,10 +840,14 @@ module public Logical =
 
             static member ButtonState       = buttonState
 
-            static member Highlight         = highlight
-            static member Pressed           = pressed
-            static member Border            = border
             static member BorderThickness   = borderThickness
+
+            static member Highlight         = highlight
+            static member HighlightKey      = highlightKey
+            static member Pressed           = pressed
+            static member PressedKey        = pressedKey
+            static member Border            = border
+            static member BorderKey         = borderKey
 
             static member Clicked           = clicked
 
@@ -827,15 +859,15 @@ module public Logical =
 
                             let state = x.Get ButtonElement.ButtonState
                             let borderThickness = x.Get ButtonElement.BorderThickness
-                            let border          = x.Get ButtonElement.Border
+                            let borderKey       = x.Get ButtonElement.BorderKey
 
                             let background =
                                 match state with
-                                | Normal        -> x.Get ButtonElement.Background
-                                | Highlighted   -> x.Get ButtonElement.Highlight
-                                | Pressed       -> x.Get ButtonElement.Pressed
+                                | Normal        -> x.Get ButtonElement.BackgroundKey
+                                | Highlighted   -> x.Get ButtonElement.HighlightKey
+                                | Pressed       -> x.Get ButtonElement.PressedKey
                             VisualTree.Rectangle (
-                                border |> Animated.Brush.Opaque     ,
+                                borderKey |> Animated.Brush.Opaque     ,
                                 background |> Animated.Brush.Opaque ,
                                 r |> Animated.Constant              ,
                                 borderThickness |> Animated.Constant

@@ -70,6 +70,10 @@ module internal UtilsAutoOpen =
         with
         | exn -> printfn "Caught exception: %A" exn
 
+    let TryDisposeSequence (s : seq<#IDisposable>) =
+        for v in s do
+            TryDispose v
+
     let TryRun (action : unit -> unit) = 
         try
             action()

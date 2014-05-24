@@ -1,7 +1,7 @@
 ﻿TODO:
 =====
 
-NEXT: 7
+NEXT: 8
 
 Working on
 ----------
@@ -11,7 +11,6 @@ Bugs
 ----
 1. Attached event only raised when logical tree is attached to a document element?
 2. Make sure SharpDX isn't implicitly exported in the interface
-7. Shared resources should be freed on dispose
 
 Features
 --------
@@ -20,4 +19,9 @@ Features
 6. Use units to avoid mixing up floats representing different concepts
 
 
-    
+Fixed Bugs
+----------
+7. Shared resources should be freed on dispose
+
+Added Features
+--------------

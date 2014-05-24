@@ -22,6 +22,24 @@ module public Device =
             Geometries              : ConcurrentDictionary<GeometryKey              , GeometryDescriptor    * Direct2D1.Geometry ref                        >
             TransformedGeometries   : ConcurrentDictionary<TransformedGeometryKey   , GeometryDescriptor    * Matrix3x2 * Direct2D1.TransformedGeometry ref >
         }
+
+        interface IDisposable with
+            member x.Dispose () = 
+                let brushes                 = x.Brushes.ToArray ()
+                let textFormats             = x.TextFormats.ToArray ()
+                let geometries              = x.Geometries.ToArray ()
+                let transformedGeometries   = x.TransformedGeometries.ToArray ()
+
+                x.Brushes.Clear ()
+                x.TextFormats.Clear ()
+                x.Geometries.Clear ()
+                x.TransformedGeometries.Clear ()                
+        
+                brushes                 |> Seq.map (fun kv -> let _,b = kv.Value in !b)     |> TryDisposeSequence
+                textFormats             |> Seq.map (fun kv -> let _,tf = kv.Value in !tf)   |> TryDisposeSequence
+                geometries              |> Seq.map (fun kv -> let _,g = kv.Value in !g)     |> TryDisposeSequence
+                transformedGeometries   |> Seq.map (fun kv -> let _,_,tg = kv.Value in !tg) |> TryDisposeSequence
+         
         static member New () = 
                 {
                     Key                     = ref 0
@@ -255,6 +273,7 @@ module public Device =
                 brushCache.Clear()
                 for kv in bc do
                     TryDispose kv.Value 
+                TryDispose sharedResources
                 TryDispose d2dRenderTarget
                 TryDispose surface
                 TryDispose backBuffer

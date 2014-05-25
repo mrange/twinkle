@@ -1,4 +1,4 @@
-﻿namespace silberman
+﻿namespace silberman.Internal
 
 open System
 open System.Collections.Generic
@@ -10,6 +10,7 @@ open System.Threading
 open SharpDX
 open SharpDX.Direct2D1
 
+open silberman
 open Fundamental
 
 module internal Device =

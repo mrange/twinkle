@@ -1,4 +1,4 @@
-﻿namespace silberman
+﻿namespace silberman.Internal
 
 open System
 open System.Runtime.InteropServices

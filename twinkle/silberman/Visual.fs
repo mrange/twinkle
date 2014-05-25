@@ -1,11 +1,12 @@
 ﻿namespace silberman
+open silberman.Internal
 
 open System
 open System.Diagnostics
 
 open SharpDX
-open Device
 
+open Device
 open Fundamental
 
 module public Visual =

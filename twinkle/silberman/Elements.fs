@@ -1,4 +1,5 @@
 ﻿namespace silberman
+open silberman.Internal
 
 open System
 open System.Collections.Concurrent
@@ -17,6 +18,8 @@ open Logical.Foundation
 module public Elements =
 
     module Standard =
+
+        // type Element = Logical.Foundation.Element
 
         type [<AbstractClass>] ContainerElement() =
             inherit Element()

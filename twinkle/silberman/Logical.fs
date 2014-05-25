@@ -1,4 +1,5 @@
 ﻿namespace silberman
+open silberman.Internal
 
 open System
 open System.Collections.Concurrent
@@ -600,11 +601,11 @@ module public Logical =
                         ()
 
 
+        let NoAction                (e : Element) (ov : 'T) (nv : 'T) = e.NoAction                ()
+        let InvalidateMeasurement   (e : Element) (ov : 'T) (nv : 'T) = e.InvalidateMeasurement   ()
+        let InvalidatePlacement     (e : Element) (ov : 'T) (nv : 'T) = e.InvalidatePlacement     ()
+        let InvalidateVisual        (e : Element) (ov : 'T) (nv : 'T) = e.InvalidateVisual        ()
+        let InvalidateTextFormatKey (e : Element) (ov : 'T) (nv : 'T) = e.InvalidateTextFormatKey ()
+        let InvalidateBrushKey bk   (e : Element) (ov : 'T) (nv : 'T) = e.InvalidateBrushKey bk
 
 
-    let NoAction                (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.NoAction                ()
-    let InvalidateMeasurement   (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.InvalidateMeasurement   ()
-    let InvalidatePlacement     (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.InvalidatePlacement     ()
-    let InvalidateVisual        (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.InvalidateVisual        ()
-    let InvalidateTextFormatKey (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.InvalidateTextFormatKey ()
-    let InvalidateBrushKey bk   (e : Foundation.Element) (ov : 'T) (nv : 'T) = e.InvalidateBrushKey bk

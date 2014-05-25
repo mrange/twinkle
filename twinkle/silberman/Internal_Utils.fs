@@ -1,4 +1,4 @@
-﻿namespace silberman
+﻿namespace silberman.Internal
 
 open SharpDX
 

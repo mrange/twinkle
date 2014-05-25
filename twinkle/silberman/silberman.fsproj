@@ -100,10 +100,10 @@
   </Target>
   <ItemGroup>
     <None Include="packages.config" />
-    <Compile Include="Win32.fs" />
-    <Compile Include="Utils.fs" />
+    <Compile Include="Internal_Win32.fs" />
+    <Compile Include="Internal_Utils.fs" />
     <Compile Include="Fundamental.fs" />
-    <Compile Include="Device.fs" />
+    <Compile Include="Internal_Device.fs" />
     <Compile Include="Animated.fs" />
     <Compile Include="Visual.fs" />
     <Compile Include="Logical.fs" />

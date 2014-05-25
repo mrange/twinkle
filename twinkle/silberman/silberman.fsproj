@@ -109,7 +109,6 @@
     <Compile Include="Foundation.fs" />
     <Compile Include="Elements.fs" />
     <Compile Include="App.fs" />
-    <None Include="TODO.md" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

@@ -14,8 +14,10 @@ Bugs
 
 Features
 --------
+14. Add game ending detected 
+15. Added ability to start new game
+16. Add score (based on time & moves)
 12. Adding support for Direct2D effects
-09. Work on the randomization algorithm so that the border squares are less obvious
 04. Add support for geometry realizations (when sharpdx supports it)
 05. Add support for caching of subtrees
 06. Use units to avoid mixing up floats representing different concepts
@@ -27,6 +29,7 @@ Fixed Bugs
 
 Added Features
 --------------
+09. Work on the randomization algorithm so that the border squares are less obvious
 11. Adding support for gradient brushes
 10. Support user specified geometries
 03. Figure out a way to faster lookups from descriptors ==> sharpdx primitives

@@ -88,8 +88,8 @@ type GradientStop       =
 type BrushDescriptor    =
     | Transparent
     | SolidColor        of ColorDescriptor
-    | LinearGradient    of Start:   Point   * End:      Point   * Mode: BrushExtendMode * Stops: GradientStop list 
-    | RadialGradient    of Center:  Point   * Offset:   Point   * Radius: Point * Mode: BrushExtendMode * Stops: GradientStop list 
+    | LinearGradient    of Start:   Point   * End:      Point   * Mode: BrushExtendMode * Stops: GradientStop list
+    | RadialGradient    of Center:  Point   * Offset:   Point   * Radius: Point * Mode: BrushExtendMode * Stops: GradientStop list
 
 [<StructuralEquality>]
 [<StructuralComparison>]
@@ -103,7 +103,7 @@ type TextFormatDescriptor   =
 [<StructuralEquality>]
 [<StructuralComparison>]
 type PathSegment     =
-//    | Arc               of 
+//    | Arc               of
     | Bezier            of Control0:Point   * Control1:Point    * EndPoint:  Point
     | QuadraticBezier   of Control: Point   * EndPoint:Point
     | Line              of Point:   Point

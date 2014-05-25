@@ -238,7 +238,7 @@ module TwinkleGame =
 
         [<NoEquality>]
         [<NoComparison>]
-        type CreateGameContext = 
+        type CreateGameContext =
             {
                 Context         : ElementContext
                 StrokeKey       : BrushKey
@@ -309,7 +309,7 @@ module TwinkleGame =
 
             let createVisualOverlay
                 (context    : CreateGameContext             )
-                (c          : Cell                          ) 
+                (c          : Cell                          )
                 (x          : int<X>                        )
                 (y          : int<Y>                        ) =
                 let rect = RectangleF (side * float32 x, side * float32 y, side, side)
@@ -366,7 +366,7 @@ module TwinkleGame =
                                         innerGroup.Add <| facet Up
                                         innerGroup.Add <| facet Right
                                         innerGroup.Add <| facet Down
-                                        
+
                                         let g = VisualTree.Group <| innerGroup.ToArray ()
                                         cells.Add       <| VisualTree.Transform (t, rt, g)
                                         overlays.Add    <| createVisualOverlay context c x y
@@ -426,15 +426,15 @@ module TwinkleGame =
                                                                 |> List.map (fun (k,v) -> k,context.CreateBrush v)
                                                                 |> Map.ofList
                                         let unitSquareKey   =   context.CreateGeometry <|
-                                                                    PolygonGeometry 
+                                                                    PolygonGeometry
                                                                         [
                                                                             +0.5F, +0.5F
                                                                             +0.5F, -0.5F
                                                                             -0.5F, -0.5F
                                                                             -0.5F, +0.5F
-                                                                        ]                                     
+                                                                        ]
                                         let triangleKey     =   context.CreateGeometry <|
-                                                                    PolygonGeometry 
+                                                                    PolygonGeometry
                                                                         [
                                                                              +0.0F, +0.0F
                                                                              +0.5F, +0.5F
@@ -447,8 +447,8 @@ module TwinkleGame =
                                                                 fillKeys
                                                                 unitSquareKey
                                                                 triangleKey
-                                                                        
-                                        let vt          = createVisual context 
+
+                                        let vt          = createVisual context
                                         visualTree <- Some <| vt
                                         vt
                                     | _ -> VisualTree.NoVisual

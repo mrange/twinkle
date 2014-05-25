@@ -206,12 +206,12 @@ module internal Device =
                         let x,y = points.[i]
                         sink.AddLine (Vector2 (x,y))
                     sink.EndFigure FigureEnd.Closed
-        
-        let (|Lines|_|) (segments : PathSegment list) = 
+
+        let (|Lines|_|) (segments : PathSegment list) =
             let lines               = ResizeArray<Vector2> ()
             let mutable remaining   = segments
-            while 
-                not remaining.IsEmpty 
+            while
+                not remaining.IsEmpty
                 &&  match remaining.Head with
                     | Line p     -> lines.Add <| AsVector p
                                     true
@@ -222,13 +222,13 @@ module internal Device =
             if lines.Count > 0 then Some (lines.ToArray (), remaining)
             else None
 
-        let (|Beziers|_|) (segments : PathSegment list) = 
+        let (|Beziers|_|) (segments : PathSegment list) =
             let beziers             = ResizeArray<BezierSegment> ()
             let mutable remaining   = segments
-            while 
-                not remaining.IsEmpty 
+            while
+                not remaining.IsEmpty
                 &&  match remaining.Head with
-                    | Bezier (c0, c1, e)  -> 
+                    | Bezier (c0, c1, e)  ->
                         let mutable bs  = BezierSegment()
                         bs.Point1       <- AsVector c0
                         bs.Point2       <- AsVector c1
@@ -242,13 +242,13 @@ module internal Device =
             if beziers.Count > 0 then Some (beziers.ToArray (), remaining)
             else None
 
-        let (|QuadraticBeziers|_|) (segments : PathSegment list) = 
+        let (|QuadraticBeziers|_|) (segments : PathSegment list) =
             let qbeziers            = ResizeArray<QuadraticBezierSegment> ()
             let mutable remaining   = segments
-            while 
-                not remaining.IsEmpty 
+            while
+                not remaining.IsEmpty
                 &&  match remaining.Head with
-                    | QuadraticBezier (c, e)  -> 
+                    | QuadraticBezier (c, e)  ->
                         let mutable qbs = QuadraticBezierSegment()
                         qbs.Point1      <- AsVector c
                         qbs.Point2      <- AsVector e
@@ -265,14 +265,14 @@ module internal Device =
             DrawPathGeometry <| fun sink ->
                 for figure in figures do
                     let x,y = figure.Start
-                    sink.BeginFigure 
+                    sink.BeginFigure
                         (
-                            Vector2 (x,y), 
-                            if figure.Filled then FigureBegin.Filled 
+                            Vector2 (x,y),
+                            if figure.Filled then FigureBegin.Filled
                             else FigureBegin.Hollow
-                        ) 
+                        )
 
-                    let rec drawSegments segments = 
+                    let rec drawSegments segments =
                         match segments with
                         | Lines (ls, remaining)             ->  sink.AddLines ls
                                                                 drawSegments remaining
@@ -281,23 +281,23 @@ module internal Device =
                         | QuadraticBeziers (qbs, remaining)  -> sink.AddQuadraticBeziers qbs
                                                                 drawSegments remaining
 
-                    sink.EndFigure 
+                    sink.EndFigure
                         (
-                            if figure.Closed then FigureEnd.Closed 
+                            if figure.Closed then FigureEnd.Closed
                             else FigureEnd.Closed
-                        ) 
+                        )
 
-        let CreateGradientStopCollection (m : BrushExtendMode) (stops : GradientStop list) = 
-                let gstops          = 
+        let CreateGradientStopCollection (m : BrushExtendMode) (stops : GradientStop list) =
+                let gstops          =
                     stops
-                    |> List.map (fun s -> 
+                    |> List.map (fun s ->
                                     let mutable stop = GradientStop()
                                     stop.Color      <- s.Color.ToColor4
                                     stop.Position   <- s.Position
                                     stop
                                 )
                     |> List.toArray
-                let mode = 
+                let mode =
                     match m with
                     | ClampBrush    -> Direct2D1.ExtendMode.Clamp
                     | WrapBrush     -> Direct2D1.ExtendMode.Wrap
@@ -310,13 +310,13 @@ module internal Device =
                 match bd with
                 | Transparent                       -> null
                 | SolidColor c                      -> upcast new Direct2D1.SolidColorBrush(d2dRenderTarget, c.ToColor4)
-                | LinearGradient (s, e, m, stops)   -> 
+                | LinearGradient (s, e, m, stops)   ->
                     let mutable props   = Direct2D1.LinearGradientBrushProperties()
                     props.StartPoint    <- AsVector s
                     props.EndPoint      <- AsVector e
                     use collection      = CreateGradientStopCollection m stops
                     upcast new Direct2D1.LinearGradientBrush(d2dRenderTarget, props, collection)
-                | RadialGradient (c, o, (x,y), m, stops)   -> 
+                | RadialGradient (c, o, (x,y), m, stops)   ->
                     let mutable props   = Direct2D1.RadialGradientBrushProperties()
                     props.Center                <- AsVector c
                     props.GradientOriginOffset  <- AsVector o

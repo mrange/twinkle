@@ -32,7 +32,7 @@ type StackOrientation =
     | FromTop
     | FromBottom
 
-module Foundation = 
+module Foundation =
     [<ReferenceEquality>]
     type ElementContext =
         {
@@ -239,7 +239,7 @@ module Foundation =
         let mutable parent : Element option = None
 
         member x.Parent
-            with get ()         = parent        
+            with get ()         = parent
 
         member internal x.SetParentNoTrigger p = parent <- p
 
@@ -338,7 +338,7 @@ module Foundation =
 
     and [<AbstractClass>] Element() =
 
-        inherit PropertyBag()                            
+        inherit PropertyBag()
 
         static let children = [||]
 
@@ -355,7 +355,7 @@ module Foundation =
             (id                 : string                                    )
             (brushDescriptor    : BrushDescriptor                           ) =
             let rec brush   = brushCreator id         (__InvalidateBrushKey brushKey)   <| Value brushDescriptor
-            and brushKey    = keyCreator (id+"Key")   __InvalidateVisual                
+            and brushKey    = keyCreator (id+"Key")   __InvalidateVisual
                                 <| ValueCreator
                                     (fun e ->
                                         let context         = e.Context

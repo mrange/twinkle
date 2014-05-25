@@ -16,7 +16,7 @@ let main argv =
                 Label
                     [
                         Margin  .Value <| Thickness.Uniform 4.F
-                        Text    .Value "Hi there!"
+                        Text    .Value "Click blocks to rotate them"
                     ]
                 TwinkleGame.Game
                     [
@@ -30,11 +30,11 @@ let main argv =
                 Label
                     [
                         Margin      .Value <| Thickness.Uniform 4.F
-                        Text        .Value "Hello there!"
+                        Text        .Value "Make sure all adjacent facets have the same color"
                     ]
             ]
 
-    let app = App.Show "Test app" 1600 1200 body
+    let app = App.Show "Test app" 1024 1024 body
 
     Async.StartImmediate app
 

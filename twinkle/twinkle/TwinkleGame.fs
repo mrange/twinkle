@@ -45,6 +45,8 @@ module TwinkleGame =
         | Right
         | Down
 
+    let directions = [Left; Up; Right; Down]
+
     let DirectionToInt (d : Direction) =
         match d with
         | Left  -> 0
@@ -135,6 +137,37 @@ module TwinkleGame =
                 let cell = b.Cells.[y].[x]
                 v cell dx dy
 
+    let VisitAdjacentCells
+        (v          : Cell->int<X>->int<Y>->(Direction*Cell) list->unit )
+        (b          : Board                                             )
+        =
+        let lasty = int <| b.Rows - 1<Rows>
+        let lastx = int <| b.Columns - 1<Columns>
+
+        let inline leftCell    x y = if x > 0       then Some (Left , b.Cells.[y].[x - 1])  else None
+        let inline rightCell   x y = if x < lastx   then Some (Right, b.Cells.[y].[x + 1])  else None
+        let inline upCell      x y = if y > 0       then Some (Up   , b.Cells.[y - 1].[x])  else None
+        let inline downCell    x y = if y < lasty   then Some (Down , b.Cells.[y + 1].[x])  else None
+
+        let getAdjacent x y = 
+            [
+                leftCell    x y
+                upCell      x y
+                rightCell   x y
+                downCell    x y
+            ] 
+            |> List.filter  (fun s -> s.IsSome)
+            |> List.map     (fun s -> s.Value)
+            
+
+        for y in 0..lasty do
+            let dy = y * 1<Y>
+            for x in 0..lastx do
+                let dx          = x * 1<X>
+                let cell        = b.Cells.[y].[x] 
+                let adjacent    = getAdjacent x y
+                v cell dx dy adjacent
+
     let VisitFacets
         (v          : Cell->int<X>->int<Y>->Direction->unit )
         (b          : Board                                 )
@@ -146,12 +179,11 @@ module TwinkleGame =
             for x in 0..lastx do
                 let dx = x * 1<X>
                 let cell = b.Cells.[y].[x]
-                v cell dx dy Left
-                v cell dx dy Up
-                v cell dx dy Right
-                v cell dx dy Down
 
-    let VisitAdjacent
+                for d in directions do
+                    v cell dx dy d
+
+    let VisitAdjacentFacets
         (isolated   : Cell->int<X>->int<Y>->Direction->unit                                 )
         (adjacent   : Cell->int<X>->int<Y>->Direction->Cell->int<X>->int<Y>->Direction->unit)
         (b          : Board                                                                 )
@@ -196,7 +228,7 @@ module TwinkleGame =
             | 6 -> Violet
             | _ -> Red
         let b = Board.New c r
-        b |> VisitAdjacent
+        b |> VisitAdjacentFacets
                 (fun c _ _ d -> c.SetColor d <| color ())
                 (fun c _ _ d oc _ _ od ->
                     let cl = color ()
@@ -209,6 +241,26 @@ module TwinkleGame =
         b |> VisitCells (fun c _ _ -> c.Rotate <| random.Next(0, Facets))
         b
 
+    let ComplicateBoard (random : Random) (b : Board) =
+        let complicater (c : Cell) x y (adjacent : (Direction*Cell) list)=
+            let adjacentColors = 
+                adjacent
+                |> List.collect (fun (_,c) -> directions |> List.map c.GetColor)
+                |> Seq.distinct
+                |> Seq.toArray
+            let adjacentColorSet = adjacentColors |> Set.ofArray
+
+            for d in directions do
+                let color = c.GetColor d
+                if not <| adjacentColorSet.Contains color then
+                    let i = random.Next adjacentColors.Length
+                    let newColor = adjacentColors.[i]
+                    c.SetColor d newColor
+
+            ()
+        b |> VisitAdjacentCells complicater
+        b
+
     let UpdateVisual (b : Board) =
         b |> VisitCells
                 (fun c _ _ ->
@@ -219,7 +271,7 @@ module TwinkleGame =
 
     let CheckWinCondition (b : Board) =
         let mismatches = ref 0
-        b |> VisitAdjacent
+        b |> VisitAdjacentFacets
                 (fun c _ _ d -> ())
                 (fun c _ _ d oc _ _ od ->
                     let cl  = c.GetRotatedColor d
@@ -337,7 +389,8 @@ module TwinkleGame =
 
             let random  = Random ()
 
-            let board   =   CreateBoard random 6<Columns> 6<Rows>
+            let board   =   CreateBoard random 5<Columns> 5<Rows>
+                            |> ComplicateBoard random
                             |> ShakeBoard random
                             |> UpdateVisual
 

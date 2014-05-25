@@ -299,14 +299,9 @@ module TwinkleGame =
                 let key = context.CreateTransformedGeometry UnitSquare ft
                 VisualTree.TransformedGeometry (key, s, f, sw)
 
-            let transform (state : ApplicationState)    =
-                Matrix3x2.Translation (side, side)
-            let rtransform (state : ApplicationState)   =
-                Matrix3x2.Translation (-side, -side)
-
             let random  = Random ()
 
-            let board   =   CreateBoard random 8<Columns> 8<Rows>
+            let board   =   CreateBoard random 6<Columns> 6<Rows>
                             |> ShakeBoard random
                             |> UpdateVisual
 
@@ -376,10 +371,17 @@ module TwinkleGame =
                                                                  true
 
             override x.OnMeasureContent a =
-                        Measurement.Fill
+                        let width   = (float32 board.Columns) * side
+                        let height  = (float32 board.Rows) * side
+                        Measurement.FromSize2 <| Size2F (width, height)
 
             override x.OnRenderContent  (o : Placement)
                                         (i : Placement) =
+                        let transform (state : ApplicationState)    =
+                            Matrix3x2.Translation (i.X, i.Y)
+                        let rtransform (state : ApplicationState)   =
+                            Matrix3x2.Translation (-i.X, -i.Y)
+
                         let vt =    match visualTree, x.Context with
                                     | Some vt,_         ->  vt
                                     | _, Some context   ->

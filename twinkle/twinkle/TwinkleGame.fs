@@ -1,11 +1,11 @@
 ﻿namespace twinkle
 
 open silberman
+open silberman.Visual
 
 open System
 open System.Collections.Generic
 
-open Fundamental
 open Logical
 open Elements
 open Elements.Events
@@ -226,7 +226,6 @@ module TwinkleGame =
             | CellClicked of Cell
 
     module Elements =
-        open Visual
 
         type GameElement() as x =
             inherit Foundation.Element()
@@ -354,7 +353,7 @@ module TwinkleGame =
                         for message in messages do
                             match message with
                             | CellClicked cell  ->
-                                    let ct = Fundamental.CurrentTime ()
+                                    let ct = CurrentTime ()
                                     let nt = ct + 0.2F
                                     let pd = cell.RotationInDegree
                                     cell.Rotate 1

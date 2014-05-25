@@ -1,7 +1,5 @@
 ﻿open silberman
 
-open Fundamental
-
 open Logical
 open Elements
 open Elements.Events

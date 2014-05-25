@@ -1,5 +1,6 @@
 ﻿namespace silberman
 open silberman.Internal
+open silberman.Visual
 
 open System
 open System.Collections.Concurrent
@@ -8,9 +9,6 @@ open System.Diagnostics
 open System.Threading
 
 open SharpDX
-
-open Fundamental
-open Visual
 
 module public Logical =
 
@@ -198,6 +196,8 @@ module public Logical =
                         | None              -> ()
                         ()
 
+        and PersistentPropertyCreator<'T when 'T : equality> = string -> PropertyValueChanged<'T> -> PropertyDefaultValue<'T> -> PersistentProperty<'T>
+
         and [<AbstractClass>] PropertyValue(p : Property) =
 
             abstract OnAssignValueTo : Element -> bool
@@ -236,9 +236,117 @@ module public Logical =
                         | None              -> ()
                         ()
 
+        and [<AbstractClass>] PropertyBag() as this =
+
+            let element : Element   = downcast this
+            let properties          = Dictionary<Property, obj>()
+            let eventHandlers       = Dictionary<Event, obj>()
+
+            let mutable parent : Element option = None
+
+            member x.Parent
+                with get ()         = parent        
+
+            member internal x.SetParentNoTrigger p = parent <- p
+
+            member x.Root
+                with get ()         =
+                        match parent with
+                        | None        -> x
+                        | Some parent -> parent.Root
+
+            member private x.ValidateProperty (lp :Property<'T>) =
+                lp.ValidateMember <| x.GetType()
+
+            member private x.ValidateEvent (e :Event<'T>) =
+                e.ValidateMember <| x.GetType()
+
+            member private x.TryGet (lp :Property<'T>)  : 'T option =
+                    let v = properties.Find lp
+                    match v with
+                    | None      -> None
+                    | Some v    ->
+                        let tv = v.As<'T> ()
+                        match tv with
+                        | None      -> Debug.Assert false; None
+                        | Some tv   -> Some tv
+
+
+            member x.Get    (lp : ComputedProperty<'T>)  : 'T =
+                    x.ValidateProperty lp
+                    lp.ComputeValue element
+
+            member x.Get<'T when 'T : equality> (lp : PersistentProperty<'T>)  : 'T =
+                    x.ValidateProperty lp
+                    let v = x.TryGet lp
+                    match v with
+                    | Some v    -> v
+                    | None      ->
+                        ignore <| properties.Remove lp  // Shouldn't be necessary but if the TryGet assert fails this is required to clear local value
+                        let dv,shared = lp.DefaultValue element
+                        if not shared then
+                            properties.Add(lp,dv)
+                        dv  // No ValueChanged on initializing the default value
+
+            member x.Get    (lp : Property<'T>)           : 'T =
+                    match lp.PropertyType with
+                    | Computed      -> x.Get (lp :?> ComputedProperty<'T>)
+                    | Persistent    -> x.Get (lp :?> PersistentProperty<'T>)
+                    | Empty         -> DefaultOf<_>
+
+            member x.Set<'T when 'T : equality> (lp : PersistentProperty<'T>) (v : 'T)  : unit =
+                    x.ValidateProperty lp
+                    let pv = x.Get lp
+                    if pv = v then ()
+                    else
+                        properties.[lp] <- v
+                        lp.ValueChanged element pv v
+
+            member x.Clear  (lp : PersistentProperty<'T>)           : unit =
+                    x.ValidateProperty lp
+                    let v = x.TryGet lp
+                    ignore <| properties.Remove lp  // Shouldn't be necessary but if the TryGet assert fails this is required to clear local value
+                    match v with
+                    | None      -> ()
+                    | Some v   ->
+                        // Property value found, reset to default value and raise ValueChanged
+                        let dv,shared = lp.DefaultValue element
+                        if not shared then
+                            properties.Add(lp,dv)
+                        lp.ValueChanged element v dv
+
+            member x.AssignFromPropertyValues (pvs : PropertyValue list) =
+                for pv in pvs do
+                    ignore <| pv.AssignValueTo element
+
+            member internal x.RaiseEventImpl (e : Event<'TEventValue>) (v : 'TEventValue) =
+                    x.ValidateEvent e
+                    let event = eventHandlers.Find e
+                    match event,parent with
+                    | None      , None          -> false
+                    | None      , Some parent   -> parent.RaiseEventImpl e v
+                    | Some eh   , None          -> let eh : EventHandler<'TEventValue> = downcast eh
+                                                   eh element v
+                    | Some eh   , Some parent   -> let eh : EventHandler<'TEventValue> = downcast eh
+                                                   let handled = eh element v
+                                                   if handled then true
+                                                   else parent.RaiseEventImpl e v
+
+            member x.RaiseEvent (e : Event<'TEventValue>) (v : 'TEventValue) =
+                    x.ValidateEvent e
+                    x.RaiseEventImpl e v
+
+            member x.ClearEventHandler (e : Event<'TEventValue>) =
+                    ignore <| eventHandlers.Remove e
+
+            member x.SetEventHandler (e : Event<'TEventValue>) (eh : EventHandler<'TEventValue>) =
+                    eventHandlers.[e] <- eh
+
         and [<AbstractClass>] Element() =
 
-            let mutable parent  : Element option        = None
+            inherit PropertyBag()                            
+
+            static let children = [||]
 
             static let __NoAction                   (le : Element) (ov : 'T) (nv : 'T) = le.NoAction                ()
             static let __InvalidateMeasurement      (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateMeasurement   ()
@@ -248,30 +356,26 @@ module public Logical =
             static let __InvalidateBrushKey      bk (le : Element) (ov : 'T) (nv : 'T) = le.InvalidateBrushKey bk
 
             static let brushCreator
-                (brushCreator   : string -> PropertyValueChanged<BrushDescriptor> -> PropertyDefaultValue<BrushDescriptor> -> PersistentProperty<BrushDescriptor>   )
-                (keyCreator     : string -> PropertyValueChanged<BrushKey> -> PropertyDefaultValue<BrushKey> -> PersistentProperty<BrushKey>                        )
-                (id             : string                                                                                                                            )
-                (brushDescriptor : BrushDescriptor                                                                                                                  ) =
+                (brushCreator       : PersistentPropertyCreator<BrushDescriptor>)
+                (keyCreator         : PersistentPropertyCreator<BrushKey>       )
+                (id                 : string                                    )
+                (brushDescriptor    : BrushDescriptor                           ) =
                 let rec brush   = brushCreator id         (__InvalidateBrushKey brushKey)   <| Value brushDescriptor
-                and brushKey    = keyCreator (id+"Key") __InvalidateVisual                  <| ValueCreator
-                                                                                                (fun e ->
-                                                                                                    let context = e.Context
-                                                                                                    let brush   = e.Get brush
-                                                                                                    match context with
-                                                                                                    | Some c    -> c.CreateBrush brush
-                                                                                                    | _         -> InvalidId
-                                                                                                )
+                and brushKey    = keyCreator (id+"Key")   __InvalidateVisual                
+                                    <| ValueCreator
+                                        (fun e ->
+                                            let context         = e.Context
+                                            let brushDescriptor = e.Get brush
+                                            match context with
+                                            | Some c    -> c.CreateBrush brushDescriptor
+                                            | _         -> InvalidId
+                                        )
                 brush, brushKey
 
             static let Persistent id valueChanged value = Property.Persistent<Element, _>   id valueChanged value
             static let Computed   id computeValue       = Property.Computed<Element, _>     id computeValue
             static let Routed     id sample             = Event.Routed<Element, _>          id sample
             static let Brush                            = brushCreator Persistent Persistent
-
-            static let children : Element array = [||]
-
-            let properties      = Dictionary<Property, obj>()
-            let eventHandlers   = Dictionary<Event, obj>()
 
             static let elementContext               = Persistent "ElementContext"  __NoAction               <| Value (None : ElementContext option)
 
@@ -318,121 +422,27 @@ module public Logical =
 
             member x.Children       = x.OnChildren ()
 
-            member x.Parent
-                with get ()         = parent
-
-            member x.Root
-                with get ()         =
-                        match parent with
-                        | None        -> x
-                        | Some parent -> parent.Root
-
             member x.Context        =
                         let root = x.Root
                         root.Get elementContext
 
-            member private x.ValidateProperty (lp :Property<'T>) =
-                lp.ValidateMember <| x.GetType()
-
-            member private x.ValidateEvent (e :Event<'T>) =
-                e.ValidateMember <| x.GetType()
-
-            member private x.TryGet (lp :Property<'T>)  : 'T option =
-                    let v = properties.Find lp
-                    match v with
-                    | None      -> None
-                    | Some v    ->
-                        let tv = v.As<'T> ()
-                        match tv with
-                        | None      -> Debug.Assert false; None
-                        | Some tv   -> Some tv
-
-
-            member x.Get    (lp : ComputedProperty<'T>)  : 'T =
-                    x.ValidateProperty lp
-                    lp.ComputeValue x
-
-            member x.Get<'T when 'T : equality> (lp : PersistentProperty<'T>)  : 'T =
-                    x.ValidateProperty lp
-                    let v = x.TryGet lp
-                    match v with
-                    | Some v    -> v
-                    | None      ->
-                        ignore <| properties.Remove lp  // Shouldn't be necessary but if the TryGet assert fails this is required to clear local value
-                        let dv,shared = lp.DefaultValue x
-                        if not shared then
-                            properties.Add(lp,dv)
-                        dv  // No ValueChanged on initializing the default value
-
-            member x.Get    (lp : Property<'T>)           : 'T =
-                    match lp.PropertyType with
-                    | Computed      -> x.Get (lp :?> ComputedProperty<'T>)
-                    | Persistent    -> x.Get (lp :?> PersistentProperty<'T>)
-                    | Empty         -> DefaultOf<_>
-
-            member x.Set<'T when 'T : equality> (lp : PersistentProperty<'T>) (v : 'T)  : unit =
-                    x.ValidateProperty lp
-                    let pv = x.Get lp
-                    if pv = v then ()
-                    else
-                        properties.[lp] <- v
-                        lp.ValueChanged x pv v
-
-            member x.Clear  (lp : PersistentProperty<'T>)           : unit =
-                    x.ValidateProperty lp
-                    let v = x.TryGet lp
-                    ignore <| properties.Remove lp  // Shouldn't be necessary but if the TryGet assert fails this is required to clear local value
-                    match v with
-                    | None      -> ()
-                    | Some v   ->
-                        // Property value found, reset to default value and raise ValueChanged
-                        let dv,shared = lp.DefaultValue x
-                        if not shared then
-                            properties.Add(lp,dv)
-                        lp.ValueChanged x v dv
-
-            member x.AssignFromPropertyValues (pvs : PropertyValue list) =
-                for pv in pvs do
-                    ignore <| pv.AssignValueTo x
-
-            member internal x.RaiseEventImpl (e : Event<'TEventValue>) (v : 'TEventValue) =
-                    x.ValidateEvent e
-                    let event = eventHandlers.Find e
-                    match event,parent with
-                    | None      , None          -> false
-                    | None      , Some parent   -> parent.RaiseEventImpl e v
-                    | Some eh   , None          -> let eh : EventHandler<'TEventValue> = downcast eh
-                                                   eh x v
-                    | Some eh   , Some parent   -> let eh : EventHandler<'TEventValue> = downcast eh
-                                                   let handled = eh x v
-                                                   if handled then true
-                                                   else parent.RaiseEventImpl e v
-
-            member x.RaiseEvent (e : Event<'TEventValue>) (v : 'TEventValue) =
-                    x.ValidateEvent e
-                    x.RaiseEventImpl e v
-
-            member x.ClearEventHandler (e : Event<'TEventValue>) =
-                    ignore <| eventHandlers.Remove e
-
-            member x.SetEventHandler (e : Event<'TEventValue>) (eh : EventHandler<'TEventValue>) =
-                    eventHandlers.[e] <- eh
-
             member internal x.SetParent p =
+                                let parent = x.Parent
                                 match parent with
                                 | None      -> ()
                                 | Some pp   -> failwith "Element is already a member of a logical tree"
-                                parent <- Some p
+                                x.SetParentNoTrigger <| Some p
                                 match parent with
                                 | None      -> ()
                                 | Some pp   -> pp.InvalidateMeasurement ()
                                 ignore <| x.RaiseEvent attached ()
 
             member internal x.ClearParent () =
+                                let parent = x.Parent
                                 match parent with
                                 | None      -> ()
                                 | Some pp   -> pp.InvalidateMeasurement ()
-                                parent <- None
+                                x.SetParentNoTrigger None
                                 ignore <| x.RaiseEvent detached ()
 
             static member BrushCreator          = brushCreator

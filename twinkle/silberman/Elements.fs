@@ -1,5 +1,6 @@
 ﻿namespace silberman
 open silberman.Internal
+open silberman.Visual
 
 open System
 open System.Collections.Concurrent
@@ -8,9 +9,6 @@ open System.Diagnostics
 open System.Threading
 
 open SharpDX
-
-open Fundamental
-open Visual
 
 open Logical
 open Logical.Foundation

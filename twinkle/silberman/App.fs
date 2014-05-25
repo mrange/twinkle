@@ -1,5 +1,6 @@
 ﻿namespace silberman
 open silberman.Internal
+open silberman.Visual
 
 open SharpDX
 
@@ -12,9 +13,7 @@ open System.Threading.Tasks
 
 open System.Windows.Forms
 
-open Fundamental
 open Device
-open Visual
 open Logical
 open Elements
 
@@ -129,7 +128,7 @@ module public App =
 
                     let appState = ApplicationState.New (CurrentTime()) <| !mouseState
 
-                    Visual.RenderTree appState d2dRenderTarget d !vt
+                    VisualTools.RenderTree appState d2dRenderTarget d !vt
 
                 if ct.IsCancellationRequested then shutdown ()
 

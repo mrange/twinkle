@@ -11,7 +11,6 @@ open SharpDX
 open SharpDX.Direct2D1
 
 open silberman
-open Fundamental
 
 module internal Device =
 

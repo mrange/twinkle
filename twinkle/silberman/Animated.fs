@@ -1,10 +1,6 @@
 ﻿namespace silberman
-open silberman.Internal
 
 open SharpDX
-
-open Fundamental
-open Device
 
 module public Animated =
 

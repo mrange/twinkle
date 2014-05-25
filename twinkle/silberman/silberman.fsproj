@@ -106,7 +106,7 @@
     <Compile Include="Internal_Device.fs" />
     <Compile Include="Animated.fs" />
     <Compile Include="Visual.fs" />
-    <Compile Include="Logical.fs" />
+    <Compile Include="Foundation.fs" />
     <Compile Include="Elements.fs" />
     <Compile Include="App.fs" />
     <None Include="TODO.md" />

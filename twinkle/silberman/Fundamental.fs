@@ -445,7 +445,10 @@ type BlockingQueue<'T>() =
 module FundamentalAutoOpen =
 
     let InvalidId               = 0
-    let CurrentTime () : Time = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
+    let CurrentTime () : Time   = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
+
+    let TransparentBrush        = BrushDescriptor.Transparent
+    let SolidBrush (c : Color)  = BrushDescriptor.SolidColor <| ColorDescriptor.Color c
 
     let ( .*. ) (l : AnimatedMatrix) (r : AnimatedMatrix) : AnimatedMatrix =
         fun time -> let left    = l time

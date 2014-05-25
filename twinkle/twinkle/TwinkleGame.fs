@@ -6,12 +6,13 @@ open silberman.Visual
 open System
 open System.Collections.Generic
 
-open Logical
 open Elements
 open Elements.Events
 open Elements.Properties
 
 open SharpDX
+
+open Foundation
 
 module TwinkleGame =
 
@@ -228,7 +229,7 @@ module TwinkleGame =
     module Elements =
 
         type GameElement() as x =
-            inherit Foundation.Element()
+            inherit Element()
 
             let side        = 100.F
             let halfside    = side / 2.0F
@@ -251,14 +252,14 @@ module TwinkleGame =
                 ]
 
             let createVisualFacet
-                (context    : Foundation.ElementContext )
-                (strokeKey  : BrushKey                  )
-                (overlayKey : BrushKey                  )
+                (context    : ElementContext                )
+                (strokeKey  : BrushKey                      )
+                (overlayKey : BrushKey                      )
                 (fillKeys   : Map<TwinkleColor, BrushKey>   )
-                (c          : Cell                      )
-                (x          : int<X>                    )
-                (y          : int<Y>                    )
-                (direction  : Direction                 ) =
+                (c          : Cell                          )
+                (x          : int<X>                        )
+                (y          : int<Y>                        )
+                (direction  : Direction                     ) =
                 let v = c.Visual
                 let s = strokeKey                       |> Animated.Brush.Opaque
                 let f = fillKeys.[c.GetColor direction] |> Animated.Brush.Opaque
@@ -272,11 +273,11 @@ module TwinkleGame =
                 VisualTree.TransformedGeometry (key, s, f, sw)
 
             let createVisualOverlay
-                (context    : Foundation.ElementContext )
-                (strokeKey  : BrushKey                  )
-                (overlayKey : BrushKey                  )
+                (context    : ElementContext                )
+                (strokeKey  : BrushKey                      )
+                (overlayKey : BrushKey                      )
                 (fillKeys   : Map<TwinkleColor, BrushKey>   )
-                (c          : Cell                      ) =
+                (c          : Cell                          ) =
                 let rect = RectangleF(-halfside, -halfside, side, side)
                 let v = c.Visual
                 let s = Animated.Brush.Transparent
@@ -310,7 +311,7 @@ module TwinkleGame =
                             |> UpdateVisual
 
             let createVisual
-                (context    : Foundation.ElementContext     )
+                (context    : ElementContext                )
                 (strokeKey  : BrushKey                      )
                 (overlayKey : BrushKey                      )
                 (fillKeys   : Map<TwinkleColor, BrushKey>   )
@@ -394,6 +395,6 @@ module TwinkleGame =
                                     | _ -> VisualTree.NoVisual
                         VisualTree.Transform (transform, rtransform, vt)
 
-    let Game (pvs : Foundation.PropertyValue list) = Elements.CreateElement<Elements.GameElement> pvs
+    let Game (pvs : PropertyValue list) = Elements.CreateElement<Elements.GameElement> pvs
 
 

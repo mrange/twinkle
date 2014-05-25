@@ -14,7 +14,7 @@ open System.Threading.Tasks
 open System.Windows.Forms
 
 open Device
-open Logical
+open Foundation
 open Elements
 
 module public App =
@@ -145,10 +145,10 @@ module public App =
             | e -> ignore <| fromui.Enqueue (Exception e)
 
     let Show
-        (title  : string)
-        (width  : int   )
-        (height : int   )
-        (body   : Logical.Foundation.Element) =
+        (title  : string    )
+        (width  : int       )
+        (height : int       )
+        (body   : Element   ) =
 
         let formProcessor ct toui fromui sharedResources = async {
                 do! Async.SwitchToThread2 ApartmentState.STA ThreadPriority.AboveNormal
@@ -179,14 +179,14 @@ module public App =
                 let key = sharedResources.GetTextFormat tfd
                 directWrite.GetTextFormatKey key tfd
 
-            let elementContext  = Logical.Foundation.ElementContext.New
+            let elementContext  = ElementContext.New
                                     sharedResources.GetBrush
                                     createTextFormat
                                     sharedResources.GetGeometry
                                     sharedResources.GetTransformedGeometry
                                     directWrite.EstimateTextSize
 
-            let document = Elements.Standard.DocumentElement elementContext
+            let document = Elements.Internal.DocumentElement elementContext
 
             document.Set Properties.Child <| Some body
 

@@ -10,12 +10,18 @@ open System.Threading
 
 open SharpDX
 
-open Logical
-open Logical.Foundation
+open Foundation
 
 module public Elements =
 
-    module Standard =
+    module Internal =
+
+        let NoAction                (e : Element) (ov : 'T) (nv : 'T) = e.NoAction                ()
+        let InvalidateMeasurement   (e : Element) (ov : 'T) (nv : 'T) = e.InvalidateMeasurement   ()
+        let InvalidatePlacement     (e : Element) (ov : 'T) (nv : 'T) = e.InvalidatePlacement     ()
+        let InvalidateVisual        (e : Element) (ov : 'T) (nv : 'T) = e.InvalidateVisual        ()
+        let InvalidateTextFormatKey (e : Element) (ov : 'T) (nv : 'T) = e.InvalidateTextFormatKey ()
+        let InvalidateBrushKey bk   (e : Element) (ov : 'T) (nv : 'T) = e.InvalidateBrushKey bk
 
         // type Element = Logical.Foundation.Element
 
@@ -284,10 +290,9 @@ module public Elements =
                                 borderThickness |> Animated.Constant
                                 )
 
-    module Properties =
+    open Internal
 
-        open Foundation
-        open Standard
+    module Properties =
 
         let Bounds          = Element.Bounds
         let IsVisible       = Element.IsVisible
@@ -307,15 +312,9 @@ module public Elements =
 
     module Events =
 
-        open Foundation
-        open Standard
-
         let Attached        = Element.Attached
         let Detached        = Element.Detached
         let Clicked         = ButtonElement.Clicked
-
-    open Foundation
-    open Standard
 
     let SomeElement (e : #Element) = Some (e :> Element)
 

@@ -1,7 +1,6 @@
 ﻿open twinkle
 open silberman
 
-open Logical
 open Elements
 open Elements.Events
 open Elements.Properties

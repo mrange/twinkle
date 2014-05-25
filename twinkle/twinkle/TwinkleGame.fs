@@ -244,7 +244,6 @@ module TwinkleGame =
                 StrokeKey       : BrushKey
                 OverlayKey      : BrushKey
                 FillKeys        : Map<TwinkleColor, BrushKey>
-                UnitSquareKey   : GeometryKey
                 TriangleKey     : GeometryKey
             }
             static member New c s o f u t =
@@ -253,21 +252,20 @@ module TwinkleGame =
                     StrokeKey       = s
                     OverlayKey      = o
                     FillKeys        = f
-                    UnitSquareKey   = u
                     TriangleKey     = t
                 }
 
         type GameElement() as x =
             inherit Element()
 
-            let side        = 100.F
-            let halfside    = side / 2.0F
+            let side                = 100.F
+            let halfside            = side / 2.0F
 
-            let fromVisual = BlockingQueue<FromVisualMessage> ()
+            let fromVisual          = BlockingQueue<FromVisualMessage> ()
 
-            let stroke      = AsSolidBrush Color.Black
+            let stroke              = AsSolidBrush Color.Black
 
-            let overlay     = AsSolidBrush Color.Black
+            let overlay             = AsSolidBrush Color.LightGreen
 
             let brush (t : Color)   = RadialGradient
                                         (
@@ -276,7 +274,7 @@ module TwinkleGame =
                                             (50.F,50.F) ,
                                             ClampBrush  ,
                                             [
-                                                GradientStop.New 2.F <| ColorDescriptor.Color Color.Black
+                                                GradientStop.New 3.F <| ColorDescriptor.Color Color.Black
                                                 GradientStop.New 0.F <| ColorDescriptor.Color t
                                             ]
                                         )
@@ -311,11 +309,12 @@ module TwinkleGame =
 
             let createVisualOverlay
                 (context    : CreateGameContext             )
-                (c          : Cell                          ) =
-                let rect = RectangleF(-halfside, -halfside, side, side)
+                (c          : Cell                          ) 
+                (x          : int<X>                        )
+                (y          : int<Y>                        ) =
+                let rect = RectangleF (side * float32 x, side * float32 y, side, side)
                 let v = c.Visual
-                let s = Animated.Brush.Transparent
-                let f (s : ApplicationState) =
+                let s (s : ApplicationState) =
                     if rect.Contains s.CurrentMouse.Coordinate then
                         let currentMouse        = s.CurrentMouse
                         let buttonState         = currentMouse.ButtonState
@@ -323,17 +322,18 @@ module TwinkleGame =
                         if v.LeftButtonPressed && not leftButtonPressed then
                             fromVisual.Enqueue <| CellClicked c
                         v.LeftButtonPressed <- leftButtonPressed
-                        context.OverlayKey, 0.5F
+                        context.OverlayKey, 1.F
                     else
                         v.LeftButtonPressed <- false
                         InvalidId, 0.F
+                let f = Animated.Brush.Transparent
 
                 let ft =
                     Matrix3x2.Scaling side
 
-                let sw= 2.0F |> Animated.Constant
-                let key = context.Context.CreateTransformedGeometry context.UnitSquareKey ft
-                VisualTree.TransformedGeometry (key, s, f, sw)
+                let sw= 4.0F |> Animated.Constant
+
+                VisualTree.Rectangle (s, f, rect |> Animated.Constant, sw)
 
             let random  = Random ()
 
@@ -344,7 +344,8 @@ module TwinkleGame =
             let createVisual
                 (context    : CreateGameContext             )
                 =
-                let outerGroup = List<VisualTree>()
+                let cells       = List<VisualTree>()
+                let overlays    = List<VisualTree>()
                 board |> VisitCells (fun c x y ->
                                         let innerGroup = List<VisualTree>()
 
@@ -365,13 +366,14 @@ module TwinkleGame =
                                         innerGroup.Add <| facet Up
                                         innerGroup.Add <| facet Right
                                         innerGroup.Add <| facet Down
-                                        innerGroup.Add <| createVisualOverlay context c
-
+                                        
                                         let g = VisualTree.Group <| innerGroup.ToArray ()
-                                        let t = VisualTree.Transform (t,rt, g)
-                                        outerGroup.Add t
+                                        cells.Add       <| VisualTree.Transform (t, rt, g)
+                                        overlays.Add    <| createVisualOverlay context c x y
                                     )
-                VisualTree.Group <| outerGroup.ToArray ()
+
+                cells.AddRange overlays
+                VisualTree.Group <| cells.ToArray ()
 
             let gameLoop =
                 async {

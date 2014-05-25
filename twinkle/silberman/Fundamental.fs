@@ -65,6 +65,8 @@ type ColorDescriptor =
     member x.ToColor4               =   Color4(x.Red, x.Green, x.Blue, x.Alpha)
     member x.ToColor3               =   Color3(x.Red, x.Green, x.Blue)
 
+    member x.Transparency a         =   ColorDescriptor.ARGB a x.Red x.Green x.Blue
+
 type BrushExtendMode    =
         | ClampBrush
         | WrapBrush

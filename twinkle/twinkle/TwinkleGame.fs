@@ -60,6 +60,8 @@ module TwinkleGame =
         | 3 -> Down
         | _ -> Left
 
+    [<NoEquality>]
+    [<NoComparison>]
     type VisualCell =
         {
             mutable Rotation            : AnimatedFloat
@@ -71,6 +73,8 @@ module TwinkleGame =
                 LeftButtonPressed   = false
             }
 
+    [<NoEquality>]
+    [<NoComparison>]
     type Cell =
         {
             Colors                  : TwinkleColor[]
@@ -103,6 +107,8 @@ module TwinkleGame =
                             Visual      = VisualCell.New ()
                         }
 
+    [<NoEquality>]
+    [<NoComparison>]
     type Board =
         {
             Cells   : Cell[][]
@@ -223,11 +229,15 @@ module TwinkleGame =
                 )
         !mismatches = 0
 
+    [<NoEquality>]
+    [<NoComparison>]
     type FromVisualMessage =
             | CellClicked of Cell
 
     module Elements =
 
+        [<NoEquality>]
+        [<NoComparison>]
         type CreateGameContext = 
             {
                 Context         : ElementContext
@@ -296,7 +306,9 @@ module TwinkleGame =
                 let s = Animated.Brush.Transparent
                 let f (s : ApplicationState) =
                     if rect.Contains s.CurrentMouse.Coordinate then
-                        let leftButtonPressed = s.CurrentMouse.ButtonState.HasFlag MouseButtonStates.Left
+                        let currentMouse        = s.CurrentMouse
+                        let buttonState         = currentMouse.ButtonState
+                        let leftButtonPressed   = buttonState.HasFlag MouseButtonStates.Left
                         if v.LeftButtonPressed && not leftButtonPressed then
                             fromVisual.Enqueue <| CellClicked c
                         v.LeftButtonPressed <- leftButtonPressed

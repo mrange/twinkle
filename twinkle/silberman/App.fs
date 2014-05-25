@@ -19,11 +19,14 @@ open Elements
 
 module public App =
 
-
+    [<NoEquality>]
+    [<NoComparison>]
     type private ToUIMessage =
         | NewVisual of VisualTree
         | ShutDownUI
 
+    [<NoEquality>]
+    [<NoComparison>]
     type private FromUIMessage =
         | Exception     of exn
         | Resized       of float32*float32
@@ -124,7 +127,8 @@ module public App =
 
                 d.Draw <| fun d2dRenderTarget ->
 
-                    d2dRenderTarget.Clear(AsNullable <| Color.White.ToColor4())
+                    let white = Color.White
+                    d2dRenderTarget.Clear (AsNullable <| white.ToColor4())
 
                     let appState = ApplicationState.New (CurrentTime()) <| !mouseState
 

@@ -123,8 +123,9 @@ module internal Device =
         inherit GenericDevice()
 
         let GetDeviceAndSwapChain (form : Windows.RenderForm) =
-            let width               = form.ClientSize.Width
-            let height              = form.ClientSize.Height
+            let clientSize          = form.ClientSize
+            let width               = clientSize.Width
+            let height              = clientSize.Height
 
             let mutable desc        = DXGI.SwapChainDescription()
             desc.BufferCount        <- 2
@@ -163,8 +164,9 @@ module internal Device =
 
             !device, !swapChain
 
-        let width               = float32 form.ClientSize.Width
-        let height              = float32 form.ClientSize.Height
+        let clientSize          = form.ClientSize
+        let width               = float32 clientSize.Width
+        let height              = float32 clientSize.Height
 
         let directWrite         = new DirectWrite()
         let d2dFactory          = new Direct2D1.Factory(Direct2D1.FactoryType.SingleThreaded)

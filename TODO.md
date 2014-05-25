@@ -1,16 +1,19 @@
 ﻿TODO:
 =====
 
-NEXT: 13
+NEXT: 18
 
 Working on
 ----------
 
 Bugs
 ----
+17. Rename let As* methods to To*
 01. Attached event only raised when logical tree is attached to a document element?
 02. Make sure SharpDX isn't implicitly exported in the interface
 02.1. Reduce the usage of Vector2 in the public API
+02.2. ColorDescriptor exports SharpDX types
+
 
 Features
 --------

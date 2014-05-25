@@ -215,7 +215,7 @@ module public Elements =
                             if text.Length = 0 then Measurement.Zero
                             else
                                 let key     = x.Get Element.TextFormatKey
-                                let size    = context.MeasureText key (a.ToSize2F ()) text
+                                let size    = context.MeasureText key a.ToSize2F text
                                 Measurement.FromSize2 size
 
 
@@ -226,7 +226,7 @@ module public Elements =
                             else
                                 let foregroundKey           = x.Get Element.ForegroundKey
                                 let key                     = x.Get Element.TextFormatKey
-                                let layoutRect = i.ToRectangleF () |> Animated.Constant
+                                let layoutRect = i.ToRectangleF |> Animated.Constant
                                 VisualTree.Text (text, key, layoutRect, foregroundKey |> Animated.Brush.Opaque)
 
         type ButtonState =
@@ -272,7 +272,7 @@ module public Elements =
 
             override x.OnRenderContent (o : Placement)
                                        (i : Placement) =
-                            let r = (o + x.Get Element.Margin).ToRectangleF ()
+                            let r = (o + x.Get Element.Margin).ToRectangleF
 
                             let state = x.Get ButtonElement.ButtonState
                             let borderThickness = x.Get ButtonElement.BorderThickness

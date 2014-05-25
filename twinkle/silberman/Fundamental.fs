@@ -58,14 +58,16 @@ type ColorDescriptor =
         Green   : float32
         Blue    : float32
     }
-    static member ARGB  a r g b     =   {Alpha = a; Red = r; Green = g; Blue = b}
-    static member RGB   r g b       =   ColorDescriptor.ARGB 1.F r g b
-    static member Color (c : Color) =   let toFloat (b : byte) = (float32 b) / 255.0F
-                                        ColorDescriptor.ARGB (toFloat c.A) (toFloat c.R) (toFloat c.G) (toFloat c.B)
-    member x.ToColor4               =   Color4(x.Red, x.Green, x.Blue, x.Alpha)
-    member x.ToColor3               =   Color3(x.Red, x.Green, x.Blue)
+    // TODO: This type shouldn't export SharpDX types
+    static member ARGB  a r g b     = {Alpha = a; Red = r; Green = g; Blue = b}
+    static member RGB   r g b       = ColorDescriptor.ARGB 1.F r g b
+    static member Color (c : Color) = let toFloat (b : byte) = (float32 b) / 255.0F
+                                      ColorDescriptor.ARGB (toFloat c.A) (toFloat c.R) (toFloat c.G) (toFloat c.B)
+    static member Fault             = ColorDescriptor.Color Color.Red
+    member x.ToColor4               = Color4(x.Red, x.Green, x.Blue, x.Alpha)
+    member x.ToColor3               = Color3(x.Red, x.Green, x.Blue)
 
-    member x.Transparency a         =   ColorDescriptor.ARGB a x.Red x.Green x.Blue
+    member x.Transparency a         = ColorDescriptor.ARGB a x.Red x.Green x.Blue
 
 type BrushExtendMode    =
         | ClampBrush
@@ -276,7 +278,7 @@ type AvailableUnit =
             | Bound _   , Fill              -> true
             | Bound b   , FixedMeasurement v-> b >= v
 
-    member x.ToFloat32 () =
+    member x.ToFloat32 =
             match x with
             | Unbound   -> Single.PositiveInfinity
             | Bound b   -> b
@@ -312,7 +314,7 @@ type Available =
 
     member x.IsMeasurementValid (m : Measurement)   = x.Width.IsMeasurementValid m.Width && x.Height.IsMeasurementValid m.Height
 
-    member x.ToSize2F () = Size2F(x.Width.ToFloat32 (), x.Height.ToFloat32 ())
+    member x.ToSize2F = Size2F(x.Width.ToFloat32, x.Height.ToFloat32)
 
 type PlacementUnit = float32
 
@@ -331,7 +333,7 @@ type Placement =
     member x.IsZero with get ()     = x = Placement.Zero
 
 
-    member x.ToRectangleF () = RectangleF(x.X, x.Y, x.Width, x.Height)
+    member x.ToRectangleF = RectangleF(x.X, x.Y, x.Width, x.Height)
 
     static member ( + ) (l : Placement, r : Thickness) =
                         Placement.New
@@ -481,13 +483,13 @@ type BlockingQueue<'T>() =
 [<AutoOpen>]
 module FundamentalAutoOpen =
 
-    let InvalidId                       = 0
-    let CurrentTime () : Time           = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
+    let InvalidId                           = 0
+    let CurrentTime () : Time               = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
 
-    let TransparentBrush                = BrushDescriptor.Transparent
-    let AsSolidBrush (c : Color)        = BrushDescriptor.SolidColor <| ColorDescriptor.Color c
+    let internal AsTransparentBrush         = BrushDescriptor.Transparent
+    let internal AsSolidBrush (c : Color)   = BrushDescriptor.SolidColor <| ColorDescriptor.Color c
 
-    let AsVector ((x,y) : Point)        = Vector2 (x,y)
+    let AsVector ((x,y) : Point)            = Vector2 (x,y)
 
     let ( .*. ) (l : AnimatedMatrix) (r : AnimatedMatrix) : AnimatedMatrix =
         fun time -> let left    = l time
@@ -500,3 +502,11 @@ module FundamentalAutoOpen =
         member x.Intersect  (o : MouseButtonStates) = x &&& o
         member x.Difference (o : MouseButtonStates) = x &&& ~~~o
 
+    type String with
+
+        member x.ToColorDescriptor () = 
+            let a,r,g,b = ParseColor x
+            if a >= 0.F && r >= 0.F && g >= 0.F && b >= 0.F then
+                ColorDescriptor.ARGB a r g b
+            else
+                ColorDescriptor.Fault

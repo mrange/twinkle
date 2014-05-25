@@ -1,5 +1,7 @@
 ﻿open silberman
 
+open SharpDX
+
 open Elements
 open Elements.Events
 open Elements.Properties
@@ -29,7 +31,7 @@ let main argv =
                     ]
             ]
 
-    let app = App.Show "Test app" 1600 1200 body
+    let app = App.Show "Test app" 1600 1200 (ColorDescriptor.Color Color.White) body
 
     Async.StartImmediate app
 

@@ -315,9 +315,8 @@ module TwinkleGame =
 
             let fromVisual          = BlockingQueue<FromVisualMessage> ()
 
-            let stroke              = AsSolidBrush Color.Black
-
-            let overlay             = AsSolidBrush Color.LightGreen
+            let stroke              = SolidColor <| "#000".ToColorDescriptor ()
+            let overlay             = SolidColor <| "#AFFF".ToColorDescriptor ()
 
             let brush (t : Color)   = RadialGradient
                                         (
@@ -389,7 +388,7 @@ module TwinkleGame =
 
             let random  = Random ()
 
-            let board   =   CreateBoard random 5<Columns> 5<Rows>
+            let board   =   CreateBoard random 7<Columns> 7<Rows>
                             |> ComplicateBoard random
                             |> ShakeBoard random
                             |> UpdateVisual

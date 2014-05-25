@@ -7,17 +7,21 @@ open Elements.Properties
 
 [<EntryPoint>]
 let main argv =
+    let label (text : string) = 
+            Label
+                [
+                    Text    .Value      text
+                    Margin  .Value      <| Thickness.Uniform 4.F
+                    Foreground.Value    <| (SolidColor <| "#FFF".ToColorDescriptor ())
+                ]
+
     let body =
         Stack
             [
-                Orientation.Value FromTop
+                Orientation.Value   <| FromTop
             ]
             [
-                Label
-                    [
-                        Margin  .Value <| Thickness.Uniform 4.F
-                        Text    .Value "Click blocks to rotate them"
-                    ]
+                label "Click blocks to rotate them"
                 TwinkleGame.Game
                     [
 
@@ -27,14 +31,11 @@ let main argv =
 //                    ]
 //                    >>+ Clicked.Handler (fun e v -> true)
 
-                Label
-                    [
-                        Margin      .Value <| Thickness.Uniform 4.F
-                        Text        .Value "Make sure all adjacent facets have the same color"
-                    ]
+                label "Make sure all adjacent facets have the same color"
             ]
 
-    let app = App.Show "Test app" 1024 1024 body
+    let background = "#190066".ToColorDescriptor ()
+    let app = App.Show "Test app" 1024 1024 background body
 
     Async.StartImmediate app
 

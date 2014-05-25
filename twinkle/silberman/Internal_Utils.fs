@@ -50,6 +50,49 @@ module internal UtilsAutoOpen =
         IsNear 0.0F m.M31   &&
         IsNear 0.0F m.M32
 
+    let ParseHex (defaultTo : int) (ch : char) =
+        match ch with 
+        | _ when ch >= '0' && ch <= '9' -> int ch - int '0'
+        | _ when ch >= 'a' && ch <= 'f' -> int ch - int 'a' + 10
+        | _ when ch >= 'A' && ch <= 'F' -> int ch - int 'A' + 10
+        | _                             -> defaultTo
+
+    let ParseShortColorComponent (mostSignificant : char) =
+        let ms = ParseHex -15 mostSignificant
+        (float32 ms) / 15.F
+
+    let ParseLongColorComponent (mostSignificant: char) (leastSignificant : char) =
+        let ms = ParseHex -255  mostSignificant
+        let ls = ParseHex -255  leastSignificant
+        (float32 <| ms * 16 + ls) / 255.F
+
+    let ParseColor (s : string) =
+            if s.Length < 1 || s.[0] <> '#' then 1.F,-1.F,-1.F,1.F
+            else
+                match s.Length with
+                | 4 -> 
+                    let r = ParseShortColorComponent s.[1]
+                    let g = ParseShortColorComponent s.[2]
+                    let b = ParseShortColorComponent s.[3]
+                    1.F,r,g,b
+                | 5 -> 
+                    let a = ParseShortColorComponent s.[1]
+                    let r = ParseShortColorComponent s.[2]
+                    let g = ParseShortColorComponent s.[3]
+                    let b = ParseShortColorComponent s.[4]
+                    a,r,g,b
+                | 7 -> 
+                    let r = ParseLongColorComponent s.[1] s.[2]
+                    let g = ParseLongColorComponent s.[3] s.[4]
+                    let b = ParseLongColorComponent s.[5] s.[6]
+                    1.F,r,g,b
+                | 9 -> 
+                    let a = ParseLongColorComponent s.[1] s.[2]
+                    let r = ParseLongColorComponent s.[3] s.[4]
+                    let g = ParseLongColorComponent s.[5] s.[6]
+                    let b = ParseLongColorComponent s.[7] s.[8]
+                    a,r,g,b
+                | _ -> -1.F,-1.F,-1.F,1.F
 
 
     let Log             (message  : string)= printfn "Information : %s" message
@@ -125,6 +168,7 @@ module internal UtilsAutoOpen =
 
     // TODO: Scrap these and replace with extension methods?
     // Extension methods seems easier to maintain since function application has high precence leads to less parantese
+    // Rethinking; functions easier to use with List.map and similar. Provide both is probably best
 
     let inline ( <??> ) optional defaultValue = DefaultTo optional defaultValue
     let inline ( <???> ) o defaultValue = CastTo o defaultValue
@@ -181,13 +225,13 @@ module internal UtilsAutoOpen =
                         x.Add (key, !v)
                         !v
 
-    let ToDictionary (l : seq<'TKey*'TValue>) =
+    let AsDictionary (l : seq<'TKey*'TValue>) =
         let d = Dictionary<'TKey, 'TValue> ()
         for k,v in l do
             d.[k] <- v
         d
 
-    let ToConcurrentDictionary (l : seq<'TKey*'TValue>) =
+    let AsConcurrentDictionary (l : seq<'TKey*'TValue>) =
         let d = ConcurrentDictionary<'TKey, 'TValue> ()
         for k,v in l do
             ignore <| d.TryAdd (k,v)

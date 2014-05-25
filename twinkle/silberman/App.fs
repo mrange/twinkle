@@ -37,6 +37,7 @@ module public App =
         (title      : string                                    )
         (width      : float32                                   )
         (height     : float32                                   )
+        (background : ColorDescriptor                           )
         (ct         : CancellationToken                         )
         (toui       : ConcurrentQueue<ToUIMessage>              )
         (fromui     : BlockingQueue<FromUIMessage>              )
@@ -121,14 +122,15 @@ module public App =
 
         let vt = ref VisualTree.NoVisual
 
+        let bkg = AsNullable background.ToColor4
+
         try
             Windows.RenderLoop.Run(form, fun () ->
                 let d = !device
 
                 d.Draw <| fun d2dRenderTarget ->
 
-                    let white = Color.White
-                    d2dRenderTarget.Clear (AsNullable <| white.ToColor4())
+                    d2dRenderTarget.Clear bkg
 
                     let appState = ApplicationState.New (CurrentTime()) <| !mouseState
 
@@ -149,15 +151,16 @@ module public App =
             | e -> ignore <| fromui.Enqueue (Exception e)
 
     let Show
-        (title  : string    )
-        (width  : int       )
-        (height : int       )
-        (body   : Element   ) =
+        (title      : string            )
+        (width      : int               )
+        (height     : int               )
+        (background : ColorDescriptor   )
+        (body       : Element           ) =
 
         let formProcessor ct toui fromui sharedResources = async {
                 do! Async.SwitchToThread2 ApartmentState.STA ThreadPriority.AboveNormal
 
-                ShowForm title (float32 width) (float32 height) ct toui fromui sharedResources
+                ShowForm title (float32 width) (float32 height) background ct toui fromui sharedResources
 
                 return ()
             }

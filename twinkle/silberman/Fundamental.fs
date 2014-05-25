@@ -16,6 +16,8 @@ type GeometryKey            = int
 type TransformedGeometryKey = int
 type Time                   = float32
 
+type Point                  = float32*float32
+
 [<Flags>]
 type MouseButtonStates =
     | Empty     = 0x000
@@ -86,6 +88,30 @@ type GeometryDescriptor     =
     | EquilateralTriangle
     | Triangle45x45x90
     | UnitSquare
+
+[<StructuralEquality>]
+[<StructuralComparison>]
+type PathSegment     =
+//    | Arc               of 
+    | Bezier            of control0:Point   * control1:Point    * endPoint:  Point
+    | QuadraticBezier   of control: Point   * endPoint:Point
+    | Line              of point:   Point
+
+[<StructuralEquality>]
+[<StructuralComparison>]
+type PathFigure         =
+    {
+        Start       : Point
+        Filled      : bool
+        Closed      : bool
+        Segments    : PathSegment list
+    }
+
+[<StructuralEquality>]
+[<StructuralComparison>]
+type GeometryDescriptor2     =
+    | PathGeometry      of PathFigure list
+    | PolygonGeometry   of Point list
 
 type AnimationEase      = Time->Time->float32->float32->ApplicationState->float32
 
@@ -444,11 +470,13 @@ type BlockingQueue<'T>() =
 [<AutoOpen>]
 module FundamentalAutoOpen =
 
-    let InvalidId               = 0
-    let CurrentTime () : Time   = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
+    let InvalidId                       = 0
+    let CurrentTime () : Time           = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
 
-    let TransparentBrush        = BrushDescriptor.Transparent
-    let SolidBrush (c : Color)  = BrushDescriptor.SolidColor <| ColorDescriptor.Color c
+    let TransparentBrush                = BrushDescriptor.Transparent
+    let SolidBrush (c : Color)          = BrushDescriptor.SolidColor <| ColorDescriptor.Color c
+
+    let PointToVector ((x,y) : Point)   = Vector2 (x,y)
 
     let ( .*. ) (l : AnimatedMatrix) (r : AnimatedMatrix) : AnimatedMatrix =
         fun time -> let left    = l time

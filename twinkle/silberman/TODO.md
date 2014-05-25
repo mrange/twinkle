@@ -5,6 +5,7 @@ NEXT: 11
 
 Working on
 ----------
+10. Support user specified geometries
 
 Bugs
 ----
@@ -13,7 +14,6 @@ Bugs
 
 Features
 --------
-10. Support user specified geometries
 09. Work on the randomization algorithm so that the border squares are less obvious
 04. Add support for geometry realizations (when sharpdx supports it)
 05. Add support for caching of subtrees

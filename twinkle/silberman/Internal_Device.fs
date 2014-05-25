@@ -193,17 +193,97 @@ module internal Device =
             sink.Close ()
             upcast pg
 
-        let DrawPathGeometryFromVertices (vertices : (float32*float32) array) : Direct2D1.Geometry =
+        let DrawPathGeometryFromPoints (points : Point array) : Direct2D1.Geometry =
             DrawPathGeometry <| fun sink ->
-                if vertices.Length > 1 then
-                    Debug.Assert (vertices.Length > 2)
-                    let x,y     = vertices.[0]
+                if points.Length > 1 then
+                    Debug.Assert (points.Length > 2)
+                    let x,y     = points.[0]
+                    let xx = new ArcSegment()
                     sink.BeginFigure (Vector2 (x,y), FigureBegin.Filled)
-                    for i in 1..(vertices.Length - 1) do
-                        let x,y = vertices.[i]
+                    for i in 1..(points.Length - 1) do
+                        let x,y = points.[i]
                         sink.AddLine (Vector2 (x,y))
                     sink.EndFigure FigureEnd.Closed
+        
+        let (|Lines|_|) (segments : PathSegment list) = 
+            let lines               = ResizeArray<Vector2> ()
+            let mutable remaining   = segments
+            while 
+                not remaining.IsEmpty 
+                &&  match remaining.Head with
+                    | Line p     -> lines.Add <| PointToVector p
+                                    true
+                    | _          -> false
+                do
+                ()
 
+            if lines.Count > 0 then Some (lines.ToArray (), remaining)
+            else None
+
+        let (|Beziers|_|) (segments : PathSegment list) = 
+            let beziers             = ResizeArray<BezierSegment> ()
+            let mutable remaining   = segments
+            while 
+                not remaining.IsEmpty 
+                &&  match remaining.Head with
+                    | Bezier (c0, c1, e)  -> 
+                        let mutable bs  = BezierSegment()
+                        bs.Point1       <- PointToVector c0
+                        bs.Point2       <- PointToVector c1
+                        bs.Point3       <- PointToVector e
+                        beziers.Add bs
+                        true
+                    | _          -> false
+                do
+                ()
+
+            if beziers.Count > 0 then Some (beziers.ToArray (), remaining)
+            else None
+
+        let (|QuadraticBeziers|_|) (segments : PathSegment list) = 
+            let qbeziers            = ResizeArray<QuadraticBezierSegment> ()
+            let mutable remaining   = segments
+            while 
+                not remaining.IsEmpty 
+                &&  match remaining.Head with
+                    | QuadraticBezier (c, e)  -> 
+                        let mutable qbs = QuadraticBezierSegment()
+                        qbs.Point1      <- PointToVector c
+                        qbs.Point2      <- PointToVector e
+                        qbeziers.Add qbs
+                        true
+                    | _          -> false
+                do
+                ()
+
+            if qbeziers.Count > 0 then Some (qbeziers.ToArray (), remaining)
+            else None
+
+        let DrawPathGeometryFromFigures (figures : PathFigure list) : Direct2D1.Geometry =
+            DrawPathGeometry <| fun sink ->
+                for figure in figures do
+                    let x,y = figure.Start
+                    sink.BeginFigure 
+                        (
+                            Vector2 (x,y), 
+                            if figure.Filled then FigureBegin.Filled 
+                            else FigureBegin.Hollow
+                        ) 
+
+                    let rec drawSegments segments = 
+                        match segments with
+                        | Lines (ls, remaining)             ->  sink.AddLines ls
+                                                                drawSegments remaining
+                        | Beziers (bs, remaining)           ->  sink.AddBeziers bs
+                                                                drawSegments remaining
+                        | QuadraticBeziers (qbs, remaining)  -> sink.AddQuadraticBeziers qbs
+                                                                drawSegments remaining
+
+                    sink.EndFigure 
+                        (
+                            if figure.Closed then FigureEnd.Closed 
+                            else FigureEnd.Closed
+                        ) 
 
         let Solid (c : ColorDescriptor) =  new Direct2D1.SolidColorBrush(d2dRenderTarget, c.ToColor4)
 
@@ -214,19 +294,19 @@ module internal Device =
 
         let geometryCache =
                 [
-                    EquilateralTriangle     , DrawPathGeometryFromVertices
+                    EquilateralTriangle     , DrawPathGeometryFromPoints
                                                 [|
                                                      +0.0F, (sqrt 3.0F) / 2.0F - 1.0F / (2.0F * sqrt 3.0F)
                                                      +0.5F, - 1.0F / (2.0F * sqrt 3.0F)
                                                      -0.5F, - 1.0F / (2.0F * sqrt 3.0F)
                                                 |]
-                    Triangle45x45x90        , DrawPathGeometryFromVertices
+                    Triangle45x45x90        , DrawPathGeometryFromPoints
                                                 [|
                                                      +0.0F, +0.0F
                                                      +0.5F, +0.5F
                                                      -0.5F, +0.5F
                                                 |]
-                    UnitSquare              , DrawPathGeometryFromVertices
+                    UnitSquare              , DrawPathGeometryFromPoints
                                                 [|
                                                      +0.5F, +0.5F
                                                      +0.5F, -0.5F

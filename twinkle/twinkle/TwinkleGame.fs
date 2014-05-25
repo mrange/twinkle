@@ -265,19 +265,30 @@ module TwinkleGame =
 
             let fromVisual = BlockingQueue<FromVisualMessage> ()
 
-            let stroke      = SolidBrush Color.Black
+            let stroke      = AsSolidBrush Color.Black
 
-            let overlay     = SolidBrush Color.Black
+            let overlay     = AsSolidBrush Color.Black
 
+            let brush (t : Color)   = RadialGradient
+                                        (
+                                            (0.F,0.F)   ,
+                                            (0.F,0.F)   ,
+                                            (50.F,50.F) ,
+                                            ClampBrush  ,
+                                            [
+                                                GradientStop.New 2.F <| ColorDescriptor.Color Color.Black
+                                                GradientStop.New 0.F <| ColorDescriptor.Color t
+                                            ]
+                                        )
             let fills       =
                 [
-                    Red     , SolidBrush Color.Red
-                    Orange  , SolidBrush Color.Orange
-                    Yellow  , SolidBrush Color.Yellow
-                    Green   , SolidBrush Color.Green
-                    Blue    , SolidBrush Color.Blue
-                    Indigo  , SolidBrush Color.Indigo
-                    Violet  , SolidBrush Color.Violet
+                    Red     , brush Color.Red
+                    Orange  , brush Color.Orange
+                    Yellow  , brush Color.Yellow
+                    Green   , brush Color.Green
+                    Blue    , brush Color.Blue
+                    Indigo  , brush Color.Indigo
+                    Violet  , brush Color.Violet
                 ]
 
             let createVisualFacet
@@ -414,19 +425,19 @@ module TwinkleGame =
                                                                 |> Map.ofList
                                         let unitSquareKey   =   context.CreateGeometry <|
                                                                     PolygonGeometry 
-                                                                        [|
+                                                                        [
                                                                             +0.5F, +0.5F
                                                                             +0.5F, -0.5F
                                                                             -0.5F, -0.5F
                                                                             -0.5F, +0.5F
-                                                                        |]                                     
+                                                                        ]                                     
                                         let triangleKey     =   context.CreateGeometry <|
                                                                     PolygonGeometry 
-                                                                        [|
+                                                                        [
                                                                              +0.0F, +0.0F
                                                                              +0.5F, +0.5F
                                                                              -0.5F, +0.5F
-                                                                        |]
+                                                                        ]
                                         let context         = CreateGameContext.New
                                                                 context
                                                                 strokeKey

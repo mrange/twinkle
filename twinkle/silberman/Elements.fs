@@ -245,15 +245,15 @@ module public Elements =
 
             static let borderThickness          = Persistent    "BorderThickness"   InvalidateMeasurement   <| Value 2.0F
 
-            static let highlight, highlightKey  = Brush         "Highlight"         <| SolidBrush Color.Purple
-            static let pressed, pressedKey      = Brush         "Pressed"           <| SolidBrush Color.LightBlue
-            static let border, borderKey        = Brush         "Border"            <| SolidBrush Color.White
+            static let highlight, highlightKey  = Brush         "Highlight"         <| AsSolidBrush Color.Purple
+            static let pressed, pressedKey      = Brush         "Pressed"           <| AsSolidBrush Color.LightBlue
+            static let border, borderKey        = Brush         "Border"            <| AsSolidBrush Color.White
 
             static let clicked                  = Routed        "Clicked"          ()
 
             static do
-                Element.Foreground.Override<ButtonElement> (Some <| Value (SolidBrush Color.White)) None
-                Element.Background.Override<ButtonElement> (Some <| Value (SolidBrush Color.Black)) None
+                Element.Foreground.Override<ButtonElement> (Some <| Value (AsSolidBrush Color.White)) None
+                Element.Background.Override<ButtonElement> (Some <| Value (AsSolidBrush Color.Black)) None
 
             static member ButtonState       = buttonState
 

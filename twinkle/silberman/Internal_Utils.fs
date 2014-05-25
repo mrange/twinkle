@@ -64,9 +64,9 @@ module internal UtilsAutoOpen =
 
     let Normalize (v : Vector2) = v.Normalize(); v
 
-    let TryDispose (disposabe : IDisposable) =
+    let TryDispose (disposable : IDisposable) =
         try
-            if disposabe <> null then disposabe.Dispose ()
+            if disposable <> null then disposable.Dispose ()
         with
         | exn -> printfn "Caught exception: %A" exn
 

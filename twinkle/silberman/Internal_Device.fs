@@ -195,9 +195,10 @@ module internal Device =
             sink.Close ()
             upcast pg
 
-        let DrawPathGeometryFromPoints (points : Point array) : Direct2D1.Geometry =
+        let DrawPathGeometryFromPoints (points : Point list) : Direct2D1.Geometry =
             DrawPathGeometry <| fun sink ->
                 if points.Length > 1 then
+                    let points  = points |> List.toArray
                     let x,y     = points.[0]
                     let xx = new ArcSegment()
                     sink.BeginFigure (Vector2 (x,y), FigureBegin.Filled)
@@ -212,7 +213,7 @@ module internal Device =
             while 
                 not remaining.IsEmpty 
                 &&  match remaining.Head with
-                    | Line p     -> lines.Add <| PointToVector p
+                    | Line p     -> lines.Add <| AsVector p
                                     true
                     | _          -> false
                 do
@@ -229,9 +230,9 @@ module internal Device =
                 &&  match remaining.Head with
                     | Bezier (c0, c1, e)  -> 
                         let mutable bs  = BezierSegment()
-                        bs.Point1       <- PointToVector c0
-                        bs.Point2       <- PointToVector c1
-                        bs.Point3       <- PointToVector e
+                        bs.Point1       <- AsVector c0
+                        bs.Point2       <- AsVector c1
+                        bs.Point3       <- AsVector e
                         beziers.Add bs
                         true
                     | _          -> false
@@ -249,8 +250,8 @@ module internal Device =
                 &&  match remaining.Head with
                     | QuadraticBezier (c, e)  -> 
                         let mutable qbs = QuadraticBezierSegment()
-                        qbs.Point1      <- PointToVector c
-                        qbs.Point2      <- PointToVector e
+                        qbs.Point1      <- AsVector c
+                        qbs.Point2      <- AsVector e
                         qbeziers.Add qbs
                         true
                     | _          -> false
@@ -286,12 +287,43 @@ module internal Device =
                             else FigureEnd.Closed
                         ) 
 
-        let Solid (c : ColorDescriptor) =  new Direct2D1.SolidColorBrush(d2dRenderTarget, c.ToColor4)
+        let CreateGradientStopCollection (m : BrushExtendMode) (stops : GradientStop list) = 
+                let gstops          = 
+                    stops
+                    |> List.map (fun s -> 
+                                    let mutable stop = GradientStop()
+                                    stop.Color      <- s.Color.ToColor4
+                                    stop.Position   <- s.Position
+                                    stop
+                                )
+                    |> List.toArray
+                let mode = 
+                    match m with
+                    | ClampBrush    -> Direct2D1.ExtendMode.Clamp
+                    | WrapBrush     -> Direct2D1.ExtendMode.Wrap
+                    | MirrorBrush   -> Direct2D1.ExtendMode.Mirror
+
+                new Direct2D1.GradientStopCollection(d2dRenderTarget, gstops, mode)
+
 
         let CreateBrush (bd : BrushDescriptor) : Direct2D1.Brush =
                 match bd with
-                | Transparent       -> null
-                | SolidColor c      -> upcast Solid c
+                | Transparent                       -> null
+                | SolidColor c                      -> upcast new Direct2D1.SolidColorBrush(d2dRenderTarget, c.ToColor4)
+                | LinearGradient (s, e, m, stops)   -> 
+                    let mutable props   = Direct2D1.LinearGradientBrushProperties()
+                    props.StartPoint    <- AsVector s
+                    props.EndPoint      <- AsVector e
+                    use collection      = CreateGradientStopCollection m stops
+                    upcast new Direct2D1.LinearGradientBrush(d2dRenderTarget, props, collection)
+                | RadialGradient (c, o, (x,y), m, stops)   -> 
+                    let mutable props   = Direct2D1.RadialGradientBrushProperties()
+                    props.Center                <- AsVector c
+                    props.GradientOriginOffset  <- AsVector o
+                    props.RadiusX               <- x
+                    props.RadiusY               <- y
+                    use collection      = CreateGradientStopCollection m stops
+                    upcast new Direct2D1.RadialGradientBrush(d2dRenderTarget, props, collection)
 
         let CreateGeometry (gd : GeometryDescriptor) : Direct2D1.Geometry =
                 match gd with

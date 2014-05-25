@@ -395,7 +395,7 @@ module Foundation =
                                                                                                             )
 
         static let background, backgroundKey    = Brush "Background" BrushDescriptor.Transparent
-        static let foreground, foregroundKey    = Brush "Foreground" <| SolidBrush Color.Black
+        static let foreground, foregroundKey    = Brush "Foreground" <| AsSolidBrush Color.Black
 
 
         static let attached                     = Routed        "Attached"      ()

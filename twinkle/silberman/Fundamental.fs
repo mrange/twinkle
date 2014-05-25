@@ -65,13 +65,29 @@ type ColorDescriptor =
     member x.ToColor4               =   Color4(x.Red, x.Green, x.Blue, x.Alpha)
     member x.ToColor3               =   Color3(x.Red, x.Green, x.Blue)
 
+type BrushExtendMode    =
+        | ClampBrush
+        | WrapBrush
+        | MirrorBrush
+
+type GradientStop       =
+        {
+            Position: float32
+            Color   : ColorDescriptor
+        }
+        static member New p c =
+            {
+                Position    = p
+                Color       = c
+            }
+
 [<StructuralEquality>]
 [<StructuralComparison>]
 type BrushDescriptor    =
     | Transparent
-    | SolidColor    of ColorDescriptor
-
-
+    | SolidColor        of ColorDescriptor
+    | LinearGradient    of Start:   Point   * End:      Point   * Mode: BrushExtendMode * Stops: GradientStop list 
+    | RadialGradient    of Center:  Point   * Offset:   Point   * Radius: Point * Mode: BrushExtendMode * Stops: GradientStop list 
 
 [<StructuralEquality>]
 [<StructuralComparison>]
@@ -86,9 +102,9 @@ type TextFormatDescriptor   =
 [<StructuralComparison>]
 type PathSegment     =
 //    | Arc               of 
-    | Bezier            of control0:Point   * control1:Point    * endPoint:  Point
-    | QuadraticBezier   of control: Point   * endPoint:Point
-    | Line              of point:   Point
+    | Bezier            of Control0:Point   * Control1:Point    * EndPoint:  Point
+    | QuadraticBezier   of Control: Point   * EndPoint:Point
+    | Line              of Point:   Point
 
 [<StructuralEquality>]
 [<StructuralComparison>]
@@ -104,7 +120,7 @@ type PathFigure         =
 [<StructuralComparison>]
 type GeometryDescriptor     =
     | PathGeometry      of PathFigure list
-    | PolygonGeometry   of Point array
+    | PolygonGeometry   of Point list
 
 type AnimationEase      = Time->Time->float32->float32->ApplicationState->float32
 
@@ -467,9 +483,9 @@ module FundamentalAutoOpen =
     let CurrentTime () : Time           = (float32 GlobalClock.ElapsedMilliseconds) / 1000.F
 
     let TransparentBrush                = BrushDescriptor.Transparent
-    let SolidBrush (c : Color)          = BrushDescriptor.SolidColor <| ColorDescriptor.Color c
+    let AsSolidBrush (c : Color)        = BrushDescriptor.SolidColor <| ColorDescriptor.Color c
 
-    let PointToVector ((x,y) : Point)   = Vector2 (x,y)
+    let AsVector ((x,y) : Point)        = Vector2 (x,y)
 
     let ( .*. ) (l : AnimatedMatrix) (r : AnimatedMatrix) : AnimatedMatrix =
         fun time -> let left    = l time

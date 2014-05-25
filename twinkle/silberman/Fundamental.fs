@@ -375,7 +375,7 @@ type SizeUnit =
 
 [<StructuralEquality>]
 [<StructuralComparison>]
-type Bounds =
+type BoundingBox =
     {
         X       : PositionUnit
         Y       : PositionUnit
@@ -383,10 +383,10 @@ type Bounds =
         Height  : SizeUnit
     }
     static member New (x : PositionUnit) (y : PositionUnit) (width : SizeUnit) (height : SizeUnit) = {X = PositionUnit.Clamp x; Y = PositionUnit.Clamp y; Width = SizeUnit.Clamp width; Height = SizeUnit.Clamp height}
-    static member MinMin = Bounds.New MinPos MinPos MinSize MinSize
-    static member MinMax = Bounds.New MinPos MinPos MaxSize MaxSize
-    static member MaxMin = Bounds.New MaxPos MaxPos MinSize MinSize
-    static member MaxMax = Bounds.New MaxPos MaxPos MaxSize MaxSize
+    static member MinMin = BoundingBox.New MinPos MinPos MinSize MinSize
+    static member MinMax = BoundingBox.New MinPos MinPos MaxSize MaxSize
+    static member MaxMin = BoundingBox.New MaxPos MaxPos MinSize MinSize
+    static member MaxMax = BoundingBox.New MaxPos MaxPos MaxSize MaxSize
 
     member x.AdjustMeasurement (a : Available) (m : Measurement) =
                 let ww = x.AdjustMeasurementUnit a.Width  x.X x.Width  m.Width

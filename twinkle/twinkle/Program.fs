@@ -24,7 +24,8 @@ let main argv =
                 label "Click blocks to rotate them"
                 TwinkleGame.Game
                     [
-
+                        Margin  .Value  <| Thickness.Uniform 4.F
+                        Bounds  .Value  <| BoundingBox.New MinPos MinPos MaxSize MinSize
                     ]
 //                TextButton "Click me!"
 //                    [

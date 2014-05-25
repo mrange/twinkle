@@ -464,10 +464,17 @@ module TwinkleGame =
 
             override x.OnRenderContent  (o : Placement)
                                         (i : Placement) =
+
+                        let width   = (float32 board.Columns) * side
+                        let height  = (float32 board.Rows) * side
+
+                        let offsetx = i.X + (i.Width - width) / 2.0F
+                        let offsety = i.Y + (i.Height - height) / 2.0F
+
                         let transform (state : ApplicationState)    =
-                            Matrix3x2.Translation (i.X, i.Y)
+                            Matrix3x2.Translation (offsetx, offsety)
                         let rtransform (state : ApplicationState)   =
-                            Matrix3x2.Translation (-i.X, -i.Y)
+                            Matrix3x2.Translation (-offsetx, -offsety)
 
                         let vt =    match visualTree, x.Context with
                                     | Some vt,_         ->  vt

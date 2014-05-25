@@ -377,7 +377,7 @@ module Foundation =
         static let placement                    = Persistent "Placement"       __NoAction               <| Value (None : Placement option)
         static let visual                       = Persistent "Visual"          __NoAction               <| Value (None : VisualTree option)
 
-        static let bounds                       = Persistent "Bounds"          __InvalidateMeasurement  <| Value Bounds.MinMin
+        static let bounds                       = Persistent "Bounds"          __InvalidateMeasurement  <| Value BoundingBox.MinMin
         static let isVisible                    = Persistent "IsVisible"       __InvalidateMeasurement  <| Value true
 
         static let margin                       = Persistent "Margin"          __InvalidateMeasurement  <| Value Thickness.Zero

@@ -17,7 +17,7 @@ Bugs
 
 Features
 --------
-14. Add game ending detected 
+14. Add game ending detected
 15. Added ability to start new game
 16. Add score (based on time & moves)
 12. Adding support for Direct2D effects

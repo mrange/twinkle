@@ -504,7 +504,7 @@ module FundamentalAutoOpen =
 
     type String with
 
-        member x.ToColorDescriptor () = 
+        member x.ToColorDescriptor () =
             let a,r,g,b = ParseColor x
             if a >= 0.F && r >= 0.F && g >= 0.F && b >= 0.F then
                 ColorDescriptor.ARGB a r g b

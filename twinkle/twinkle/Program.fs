@@ -7,7 +7,7 @@ open Elements.Properties
 
 [<EntryPoint>]
 let main argv =
-    let label (text : string) = 
+    let label (text : string) =
             Label
                 [
                     Text    .Value      text

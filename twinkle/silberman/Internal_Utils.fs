@@ -51,7 +51,7 @@ module internal UtilsAutoOpen =
         IsNear 0.0F m.M32
 
     let ParseHex (defaultTo : int) (ch : char) =
-        match ch with 
+        match ch with
         | _ when ch >= '0' && ch <= '9' -> int ch - int '0'
         | _ when ch >= 'a' && ch <= 'f' -> int ch - int 'a' + 10
         | _ when ch >= 'A' && ch <= 'F' -> int ch - int 'A' + 10
@@ -70,23 +70,23 @@ module internal UtilsAutoOpen =
             if s.Length < 1 || s.[0] <> '#' then 1.F,-1.F,-1.F,1.F
             else
                 match s.Length with
-                | 4 -> 
+                | 4 ->
                     let r = ParseShortColorComponent s.[1]
                     let g = ParseShortColorComponent s.[2]
                     let b = ParseShortColorComponent s.[3]
                     1.F,r,g,b
-                | 5 -> 
+                | 5 ->
                     let a = ParseShortColorComponent s.[1]
                     let r = ParseShortColorComponent s.[2]
                     let g = ParseShortColorComponent s.[3]
                     let b = ParseShortColorComponent s.[4]
                     a,r,g,b
-                | 7 -> 
+                | 7 ->
                     let r = ParseLongColorComponent s.[1] s.[2]
                     let g = ParseLongColorComponent s.[3] s.[4]
                     let b = ParseLongColorComponent s.[5] s.[6]
                     1.F,r,g,b
-                | 9 -> 
+                | 9 ->
                     let a = ParseLongColorComponent s.[1] s.[2]
                     let r = ParseLongColorComponent s.[3] s.[4]
                     let g = ParseLongColorComponent s.[5] s.[6]

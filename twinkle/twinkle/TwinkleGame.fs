@@ -149,22 +149,22 @@ module TwinkleGame =
         let inline upCell      x y = if y > 0       then Some (Up   , b.Cells.[y - 1].[x])  else None
         let inline downCell    x y = if y < lasty   then Some (Down , b.Cells.[y + 1].[x])  else None
 
-        let getAdjacent x y = 
+        let getAdjacent x y =
             [
                 leftCell    x y
                 upCell      x y
                 rightCell   x y
                 downCell    x y
-            ] 
+            ]
             |> List.filter  (fun s -> s.IsSome)
             |> List.map     (fun s -> s.Value)
-            
+
 
         for y in 0..lasty do
             let dy = y * 1<Y>
             for x in 0..lastx do
                 let dx          = x * 1<X>
-                let cell        = b.Cells.[y].[x] 
+                let cell        = b.Cells.[y].[x]
                 let adjacent    = getAdjacent x y
                 v cell dx dy adjacent
 
@@ -243,7 +243,7 @@ module TwinkleGame =
 
     let ComplicateBoard (random : Random) (b : Board) =
         let complicater (c : Cell) x y (adjacent : (Direction*Cell) list)=
-            let adjacentColors = 
+            let adjacentColors =
                 adjacent
                 |> List.collect (fun (_,c) -> directions |> List.map c.GetColor)
                 |> Seq.distinct

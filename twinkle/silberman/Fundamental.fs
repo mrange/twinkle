@@ -84,13 +84,6 @@ type TextFormatDescriptor   =
 
 [<StructuralEquality>]
 [<StructuralComparison>]
-type GeometryDescriptor     =
-    | EquilateralTriangle
-    | Triangle45x45x90
-    | UnitSquare
-
-[<StructuralEquality>]
-[<StructuralComparison>]
 type PathSegment     =
 //    | Arc               of 
     | Bezier            of control0:Point   * control1:Point    * endPoint:  Point
@@ -109,9 +102,9 @@ type PathFigure         =
 
 [<StructuralEquality>]
 [<StructuralComparison>]
-type GeometryDescriptor2     =
+type GeometryDescriptor     =
     | PathGeometry      of PathFigure list
-    | PolygonGeometry   of Point list
+    | PolygonGeometry   of Point array
 
 type AnimationEase      = Time->Time->float32->float32->ApplicationState->float32
 

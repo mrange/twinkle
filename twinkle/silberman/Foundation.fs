@@ -39,7 +39,7 @@ module Foundation =
             CreateBrush                 : BrushDescriptor       -> BrushKey
             CreateTextFormat            : TextFormatDescriptor  -> TextFormatKey
             CreateGeometry              : GeometryDescriptor    -> GeometryKey
-            CreateTransformedGeometry   : GeometryDescriptor    -> Matrix3x2 -> TransformedGeometryKey
+            CreateTransformedGeometry   : GeometryKey           -> Matrix3x2 -> TransformedGeometryKey
             MeasureText                 : TextFormatKey         -> Size2F -> string -> Size2F
         }
         static member New cb ctf cg ctg mt =

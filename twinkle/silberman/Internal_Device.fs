@@ -47,15 +47,15 @@ module internal Device =
 
     type SharedResources() =
         let key                             = ref InvalidId
-        let brushes                         = ConcurrentDictionary<BrushKey                 , BrushDescriptor                   * Direct2D1.Brush ref               >()
-        let textFormats                     = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor              * DirectWrite.TextFormat ref        >()
-        let geometries                      = ConcurrentDictionary<GeometryKey              , GeometryDescriptor                * Direct2D1.Geometry ref            >()
-        let transformedGeometries           = ConcurrentDictionary<TransformedGeometryKey   , (GeometryDescriptor* Matrix3x2)   * Direct2D1.TransformedGeometry ref >()
+        let brushes                         = ConcurrentDictionary<BrushKey                 , BrushDescriptor           * Direct2D1.Brush ref               >()
+        let textFormats                     = ConcurrentDictionary<TextFormatKey            , TextFormatDescriptor      * DirectWrite.TextFormat ref        >()
+        let geometries                      = ConcurrentDictionary<GeometryKey              , GeometryDescriptor        * Direct2D1.Geometry ref            >()
+        let transformedGeometries           = ConcurrentDictionary<TransformedGeometryKey   , (GeometryKey* Matrix3x2)  * Direct2D1.TransformedGeometry ref >()
 
-        let brushDescriptors                = ConcurrentDictionary<BrushDescriptor                  , BrushKey              >()
-        let textFormatDescriptors           = ConcurrentDictionary<TextFormatDescriptor             , TextFormatKey         >()
-        let geometryDescriptors             = ConcurrentDictionary<GeometryDescriptor               , GeometryKey           >()
-        let transformedGeometryDescriptors  = ConcurrentDictionary<GeometryDescriptor * Matrix3x2   , TransformedGeometryKey>()
+        let brushDescriptors                = ConcurrentDictionary<BrushDescriptor          , BrushKey                  >()
+        let textFormatDescriptors           = ConcurrentDictionary<TextFormatDescriptor     , TextFormatKey             >()
+        let geometryDescriptors             = ConcurrentDictionary<GeometryDescriptor       , GeometryKey               >()
+        let transformedGeometryDescriptors  = ConcurrentDictionary<GeometryKey * Matrix3x2  , TransformedGeometryKey    >()
 
         let generateKey () = Interlocked.Increment key
 
@@ -106,8 +106,8 @@ module internal Device =
         member x.GetGeometry              (gd : GeometryDescriptor)     : GeometryKey   =
                 getKey geometries geometryDescriptors gd
 
-        member x.GetTransformedGeometry   (gd : GeometryDescriptor) (t : Matrix3x2) : GeometryKey =
-                let d = gd,t
+        member x.GetTransformedGeometry   (gk : GeometryKey) (t : Matrix3x2) : GeometryKey =
+                let d = gk,t
                 getKey transformedGeometries transformedGeometryDescriptors d
 
     [<AbstractClass>]
@@ -196,7 +196,6 @@ module internal Device =
         let DrawPathGeometryFromPoints (points : Point array) : Direct2D1.Geometry =
             DrawPathGeometry <| fun sink ->
                 if points.Length > 1 then
-                    Debug.Assert (points.Length > 2)
                     let x,y     = points.[0]
                     let xx = new ArcSegment()
                     sink.BeginFigure (Vector2 (x,y), FigureBegin.Filled)
@@ -292,28 +291,10 @@ module internal Device =
                 | Transparent       -> null
                 | SolidColor c      -> upcast Solid c
 
-        let geometryCache =
-                [
-                    EquilateralTriangle     , DrawPathGeometryFromPoints
-                                                [|
-                                                     +0.0F, (sqrt 3.0F) / 2.0F - 1.0F / (2.0F * sqrt 3.0F)
-                                                     +0.5F, - 1.0F / (2.0F * sqrt 3.0F)
-                                                     -0.5F, - 1.0F / (2.0F * sqrt 3.0F)
-                                                |]
-                    Triangle45x45x90        , DrawPathGeometryFromPoints
-                                                [|
-                                                     +0.0F, +0.0F
-                                                     +0.5F, +0.5F
-                                                     -0.5F, +0.5F
-                                                |]
-                    UnitSquare              , DrawPathGeometryFromPoints
-                                                [|
-                                                     +0.5F, +0.5F
-                                                     +0.5F, -0.5F
-                                                     -0.5F, -0.5F
-                                                     -0.5F, +0.5F
-                                                |]
-                ] |> ToDictionary
+        let CreateGeometry (gd : GeometryDescriptor) : Direct2D1.Geometry =
+                match gd with
+                | PathGeometry      figures -> DrawPathGeometryFromFigures figures
+                | PolygonGeometry   points  -> DrawPathGeometryFromPoints points
 
         override x.GetBrush (key : BrushKey, opacity : float32) : Direct2D1.Brush =
             let find = sharedResources.Device_Brushes.Find key
@@ -348,7 +329,7 @@ module internal Device =
             match find with
             | Some (_, geometry) when !geometry <> null -> !geometry
             | Some (geometryDescriptor, geometry) ->
-                geometry := geometryCache.[geometryDescriptor]
+                geometry := CreateGeometry geometryDescriptor
                 !geometry
             | _ -> null
 
@@ -357,8 +338,9 @@ module internal Device =
             let find = sharedResources.Device_TransformedGeometries.Find key
             match find with
             | Some (_, geometry) when !geometry <> null -> !geometry
-            | Some ((geometryDescriptor, t), geometry) ->
-                geometry := new TransformedGeometry(d2dFactory, geometryCache.[geometryDescriptor], t)
+            | Some ((geometryKey, t), geometry) ->
+                let g     = x.GetGeometry geometryKey
+                geometry := new TransformedGeometry(d2dFactory, g, t)
                 !geometry
             | _ -> null
 

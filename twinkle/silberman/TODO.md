@@ -5,7 +5,6 @@ NEXT: 11
 
 Working on
 ----------
-10. Support user specified geometries
 
 Bugs
 ----
@@ -26,4 +25,5 @@ Fixed Bugs
 
 Added Features
 --------------
+10. Support user specified geometries
 03. Figure out a way to faster lookups from descriptors ==> sharpdx primitives

@@ -7,8 +7,9 @@ open System.Collections.Generic
 
 open Fundamental
 open Logical
-open Logical.Events
-open Logical.Properties
+open Elements
+open Elements.Events
+open Elements.Properties
 
 open SharpDX
 
@@ -394,6 +395,6 @@ module TwinkleGame =
                                     | _ -> VisualTree.NoVisual
                         VisualTree.Transform (transform, rtransform, vt)
 
-    let Game (pvs : Foundation.PropertyValue list) = Logical.CreateElement<Elements.GameElement> pvs
+    let Game (pvs : Foundation.PropertyValue list) = Elements.CreateElement<Elements.GameElement> pvs
 
 

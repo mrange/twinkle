@@ -107,6 +107,7 @@
     <Compile Include="Animated.fs" />
     <Compile Include="Visual.fs" />
     <Compile Include="Logical.fs" />
+    <Compile Include="Elements.fs" />
     <Compile Include="App.fs" />
     <None Include="TODO.md" />
   </ItemGroup>

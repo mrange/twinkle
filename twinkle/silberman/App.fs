@@ -15,6 +15,7 @@ open Fundamental
 open Device
 open Visual
 open Logical
+open Elements
 
 module public App =
 
@@ -185,7 +186,7 @@ module public App =
                                     sharedResources.GetTransformedGeometry
                                     directWrite.EstimateTextSize
 
-            let document = Logical.Standard.DocumentElement elementContext
+            let document = Elements.Standard.DocumentElement elementContext
 
             document.Set Properties.Child <| Some body
 

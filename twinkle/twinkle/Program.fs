@@ -3,8 +3,9 @@ open silberman
 
 open Fundamental
 open Logical
-open Logical.Events
-open Logical.Properties
+open Elements
+open Elements.Events
+open Elements.Properties
 
 [<EntryPoint>]
 let main argv =

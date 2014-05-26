@@ -292,19 +292,25 @@ module TwinkleGame =
         [<NoComparison>]
         type CreateGameContext =
             {
-                Context         : ElementContext
-                StrokeKey       : BrushKey
-                OverlayKey      : BrushKey
-                FillKeys        : Map<TwinkleColor, BrushKey>
-                TriangleKey     : GeometryKey
+                Context             : ElementContext
+                OverlayTextFormat   : TextFormatKey
+                OverlayBackGround   : BrushKey
+                OverlayForeground   : BrushKey
+                StrokeKey           : BrushKey
+                OverlayKey          : BrushKey
+                FillKeys            : Map<TwinkleColor, BrushKey>
+                TriangleKey         : GeometryKey
             }
-            static member New c s o f t =
+            static member New c oltf olb olf s o f t =
                 {
-                    Context         = c
-                    StrokeKey       = s
-                    OverlayKey      = o
-                    FillKeys        = f
-                    TriangleKey     = t
+                    Context             = c
+                    OverlayTextFormat   = oltf    
+                    OverlayBackGround   = olb
+                    OverlayForeground   = olf
+                    StrokeKey           = s
+                    OverlayKey          = o
+                    FillKeys            = f
+                    TriangleKey         = t
                 }
 
         type GameElement() as x =
@@ -314,6 +320,10 @@ module TwinkleGame =
             let halfside            = side / 2.0F
 
             let fromVisual          = BlockingQueue<FromVisualMessage> ()
+
+            let overlayTextFormat   = TextFormatDescriptor.New "Consolas" 80.F
+            let overlayBackGround   = SolidColor <| "#C000".ToColorDescriptor ()
+            let overlayForeground   = SolidColor <| "#FFF".ToColorDescriptor ()
 
             let stroke              = SolidColor <| "#000".ToColorDescriptor ()
             let overlay             = SolidColor <| "#AFFF".ToColorDescriptor ()
@@ -339,6 +349,13 @@ module TwinkleGame =
                     Indigo  , brush Color.Indigo
                     Violet  , brush Color.Violet
                 ]
+
+            let random  = Random ()
+
+            let board   =   CreateBoard random 7<Columns> 7<Rows>
+                            |> ComplicateBoard random
+                            |> ShakeBoard random
+                            |> UpdateVisual
 
             let createVisualFacet
                 (context    : CreateGameContext             )
@@ -386,12 +403,33 @@ module TwinkleGame =
 
                 VisualTree.Rectangle (s, f, rect |> Animated.Constant, sw)
 
-            let random  = Random ()
+            let createOverlay
+                (context    : CreateGameContext             )
+                =
+                let width   = (float32 board.Columns) * side
+                let height  = (float32 board.Rows) * side
 
-            let board   =   CreateBoard random 7<Columns> 7<Rows>
-                            |> ComplicateBoard random
-                            |> ShakeBoard random
-                            |> UpdateVisual
+                let group = 
+                    [|
+                        Visual.Rectangle 
+                            (
+                                Animated.Brush.Transparent                                          ,
+                                context.OverlayBackGround               |> Animated.Brush.Opaque    ,
+                                RectangleF (0.F, 0.F, width, height)    |> Animated.Constant        ,
+                                0.F                                     |> Animated.Constant
+                            )
+
+                        Visual.Text 
+                            (
+                                "You win!"                                                          , 
+                                context.OverlayTextFormat                                           ,
+                                RectangleF (0.F, 0.F, width, height)    |> Animated.Constant        ,
+                                context.OverlayForeground               |> Animated.Brush.Opaque    
+                            )
+                    |]
+
+                Visual.Group group
+
 
             let createVisual
                 (context    : CreateGameContext             )
@@ -425,6 +463,9 @@ module TwinkleGame =
                                     )
 
                 cells.AddRange overlays
+
+//                cells.Add <| createOverlay context    
+
                 VisualTree.Group <| cells.ToArray ()
 
             let opacity  = 
@@ -484,8 +525,6 @@ module TwinkleGame =
                         let vt =    match visualTree, x.Context with
                                     | Some vt,_         ->  vt
                                     | _, Some context   ->
-                                        let strokeKey       =   context.CreateBrush stroke
-                                        let overlayKey      =   context.CreateBrush overlay
                                         let fillKeys        =   fills
                                                                 |> List.map (fun (k,v) -> k,context.CreateBrush v)
                                                                 |> Map.ofList
@@ -498,8 +537,11 @@ module TwinkleGame =
                                                                         ]
                                         let context         = CreateGameContext.New
                                                                 context
-                                                                strokeKey
-                                                                overlayKey
+                                                                (context.CreateTextFormat overlayTextFormat)
+                                                                (context.CreateBrush overlayBackGround)
+                                                                (context.CreateBrush overlayForeground)
+                                                                (context.CreateBrush stroke)
+                                                                (context.CreateBrush overlay)
                                                                 fillKeys
                                                                 triangleKey
 

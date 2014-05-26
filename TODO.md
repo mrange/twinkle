@@ -1,7 +1,7 @@
 ﻿TODO:
 =====
 
-NEXT: 19
+NEXT: 20
 
 Working on
 ----------
@@ -24,6 +24,7 @@ Features
 04. Add support for geometry realizations (when sharpdx supports it)
 05. Add support for caching of subtrees
 18. Add support for D2D layers
+19. Improve opacity support (possible need to use layers)
 06. Use units to avoid mixing up floats representing different concepts
 
 

@@ -298,7 +298,7 @@ module TwinkleGame =
                 FillKeys        : Map<TwinkleColor, BrushKey>
                 TriangleKey     : GeometryKey
             }
-            static member New c s o f u t =
+            static member New c s o f t =
                 {
                     Context         = c
                     StrokeKey       = s
@@ -427,6 +427,11 @@ module TwinkleGame =
                 cells.AddRange overlays
                 VisualTree.Group <| cells.ToArray ()
 
+            let opacity  = 
+                let bt = CurrentTime ()
+                let et = bt + 1.F
+                Animated.Float Animated.Ease.Linear bt et 0.F 1.F
+
             let gameLoop =
                 async {
                     do! Async.SwitchToNewThread ()
@@ -484,14 +489,6 @@ module TwinkleGame =
                                         let fillKeys        =   fills
                                                                 |> List.map (fun (k,v) -> k,context.CreateBrush v)
                                                                 |> Map.ofList
-                                        let unitSquareKey   =   context.CreateGeometry <|
-                                                                    PolygonGeometry
-                                                                        [
-                                                                            +0.5F, +0.5F
-                                                                            +0.5F, -0.5F
-                                                                            -0.5F, -0.5F
-                                                                            -0.5F, +0.5F
-                                                                        ]
                                         let triangleKey     =   context.CreateGeometry <|
                                                                     PolygonGeometry
                                                                         [
@@ -504,14 +501,14 @@ module TwinkleGame =
                                                                 strokeKey
                                                                 overlayKey
                                                                 fillKeys
-                                                                unitSquareKey
                                                                 triangleKey
 
                                         let vt          = createVisual context
                                         visualTree <- Some <| vt
                                         vt
                                     | _ -> VisualTree.NoVisual
-                        VisualTree.Transform (transform, rtransform, vt)
+
+                        Visual.Opacity (opacity, VisualTree.Transform (transform, rtransform, vt))
 
     let Game (pvs : PropertyValue list) = Elements.CreateElement<Elements.GameElement> pvs
 

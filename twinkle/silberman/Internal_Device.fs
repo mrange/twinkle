@@ -112,7 +112,7 @@ module internal Device =
 
     [<AbstractClass>]
     type GenericDevice() =
-        abstract member GetBrush                : BrushKey*float32          -> Direct2D1.Brush
+        abstract member GetBrush                : BrushKey*float32*float32  -> Direct2D1.Brush
         abstract member GetTextFormat           : TextFormatKey             -> DirectWrite.TextFormat
         abstract member GetGeometry             : GeometryKey               -> Direct2D1.Geometry
         abstract member GetTransformedGeometry  : TransformedGeometryKey    -> Direct2D1.TransformedGeometry
@@ -330,19 +330,19 @@ module internal Device =
                 | PathGeometry      figures -> DrawPathGeometryFromFigures figures
                 | PolygonGeometry   points  -> DrawPathGeometryFromPoints points
 
-        override x.GetBrush (key : BrushKey, opacity : float32) : Direct2D1.Brush =
-            let find = sharedResources.Device_Brushes.Find key
-            let brush =
+        override x.GetBrush (key : BrushKey, opacity : float32, globalOpacity : float32) : Direct2D1.Brush =
+            if opacity > 0.F && globalOpacity > 0.F then
+                let find = sharedResources.Device_Brushes.Find key
                 match find with
-                | Some (_, brush) when !brush <> null -> !brush
+                | Some (_, brush) when !brush <> null -> 
+                    (!brush).Opacity <- opacity * globalOpacity
+                    !brush
                 | Some (brushDescriptor, brush) ->
                     brush := CreateBrush brushDescriptor
+                    (!brush).Opacity <- opacity * globalOpacity
                     !brush
                 | _ -> null
 
-            if opacity > 0.F && brush <> null then
-                brush.Opacity <- opacity
-                brush
             else null
 
         member x.SharedResources    = sharedResources

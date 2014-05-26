@@ -1,7 +1,7 @@
 ﻿TODO:
 =====
 
-NEXT: 18
+NEXT: 19
 
 Working on
 ----------
@@ -23,6 +23,7 @@ Features
 12. Adding support for Direct2D effects
 04. Add support for geometry realizations (when sharpdx supports it)
 05. Add support for caching of subtrees
+18. Add support for D2D layers
 06. Use units to avoid mixing up floats representing different concepts
 
 

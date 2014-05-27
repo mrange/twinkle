@@ -161,8 +161,8 @@ module Foundation =
     and [<Sealed>] PersistentProperty<'T when 'T : equality>(id : string, declaringType : Type, defaultValue : PropertyDefaultValue<'T>, valueChanged : PropertyValueChanged<'T>)=
         inherit Property<'T>(id, declaringType)
 
-        static let overrideDefaultValue = TypeDictionary<PropertyDefaultValue<'T>>()
-        static let overrideValueChanged = TypeDictionary<PropertyValueChanged<'T>>()
+        let overrideDefaultValue = TypeDictionary<PropertyDefaultValue<'T>>()
+        let overrideValueChanged = TypeDictionary<PropertyValueChanged<'T>>()
 
         override x.OnPropertyType ()    = Computed
 
@@ -214,7 +214,7 @@ module Foundation =
     and [<Sealed>] ComputedProperty<'T>(id : string, declaringType : Type, computeValue : ComputePropertyValue<'T>) =
         inherit Property<'T>(id, declaringType)
 
-        static let overrideCompute  = TypeDictionary<ComputePropertyValue<'T>>()
+        let overrideCompute  = TypeDictionary<ComputePropertyValue<'T>>()
 
         override x.OnPropertyType ()= Persistent
 

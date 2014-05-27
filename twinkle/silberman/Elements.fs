@@ -250,7 +250,7 @@ module public Elements =
 
             static let buttonState              = Persistent    "ButtonState"       InvalidateVisual        <| Value ButtonState.Normal
 
-            static let borderThickness          = Persistent    "BorderThickness"   InvalidateMeasurement   <| Value 2.0F
+            static let borderThickness          = Persistent    "BorderThickness"   InvalidateMeasurement   <| Value 4.0F
 
             static let highlight, highlightKey  = Brush         "Highlight"         <| AsSolidBrush Color.Purple
             static let pressed, pressedKey      = Brush         "Pressed"           <| AsSolidBrush Color.LightBlue
@@ -260,7 +260,8 @@ module public Elements =
 
             static do
                 Element.Foreground.Override<ButtonElement> (Some <| Value (AsSolidBrush Color.White)) None
-                Element.Background.Override<ButtonElement> (Some <| Value (AsSolidBrush Color.Black)) None
+                Element.Background.Override<ButtonElement> (Some <| Value (AsSolidBrush Color.Transparent)) None
+                DecoratorElement.Padding.Override<ButtonElement> (Some <| Value (Thickness.New 16.F 4.F 16.F 4.F)) None
 
             static member ButtonState       = buttonState
 
@@ -279,21 +280,21 @@ module public Elements =
 
             override x.OnRenderContent (o : Placement)
                                        (i : Placement) =
-                            let r = (o + x.Get Element.Margin).ToRectangleF
+                            let rect            = (o + x.Get Element.Margin).ToRectangleF
 
-                            let state = x.Get ButtonElement.ButtonState
+                            let state           = x.Get ButtonElement.ButtonState
                             let borderThickness = x.Get ButtonElement.BorderThickness
                             let borderKey       = x.Get ButtonElement.BorderKey
 
-                            let background =
+                            let backgroundKey =
                                 match state with
                                 | Normal        -> x.Get ButtonElement.BackgroundKey
                                 | Highlighted   -> x.Get ButtonElement.HighlightKey
                                 | Pressed       -> x.Get ButtonElement.PressedKey
                             VisualTree.Rectangle (
-                                borderKey |> Animated.Brush.Opaque     ,
-                                background |> Animated.Brush.Opaque ,
-                                r |> Animated.Constant              ,
+                                borderKey       |> Animated.Brush.Opaque,
+                                backgroundKey   |> Animated.Brush.Opaque,
+                                rect            |> Animated.Constant    ,
                                 borderThickness |> Animated.Constant
                                 )
 
@@ -352,5 +353,10 @@ module public Elements =
     let Button (pvs : PropertyValue list) = CreateElement<ButtonElement> pvs
 
     let TextButton text (pvs : PropertyValue list) =
-        let pv : PropertyValue = upcast Properties.Child.Value (SomeElement <| Label [ Properties.Text.Value text])
+        let label               = Label 
+                                    [
+                                        Properties.Text         .Value text 
+                                        Properties.Foreground   .Value      (SolidColor <| "#FFF".ToColorDescriptor ())
+                                    ]
+        let pv : PropertyValue  = upcast Properties.Child.Value (SomeElement <| label)
         Button <| pv::pvs

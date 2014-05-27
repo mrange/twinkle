@@ -11,7 +11,6 @@ let main argv =
             Label
                 [
                     Text    .Value      text
-                    Margin  .Value      <| Thickness.Uniform 4.F
                     Foreground.Value    <| (SolidColor <| "#FFF".ToColorDescriptor ())
                 ]
 
@@ -19,12 +18,12 @@ let main argv =
         Stack
             [
                 Orientation .Value  <| FromTop
+                Margin  .Value      <| Thickness.Uniform 4.F
             ]
             [
                 label "Click blocks to rotate them"
                 TwinkleGame.Game
                     [
-                        Margin  .Value  <| Thickness.Uniform 4.F
                         Bounds  .Value  <| BoundingBox.CenterMin
                     ]
 //                TextButton "Click me!"
@@ -33,6 +32,7 @@ let main argv =
 //                    >>+ Clicked.Handler (fun e v -> true)
 
                 label "Make sure all adjacent facets have the same color"
+                TextButton "Start New Game!" []
             ]
 
     let background = "#190066".ToColorDescriptor ()

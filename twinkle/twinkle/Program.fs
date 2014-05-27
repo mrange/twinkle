@@ -18,14 +18,14 @@ let main argv =
     let body =
         Stack
             [
-                Orientation.Value   <| FromTop
+                Orientation .Value  <| FromTop
             ]
             [
                 label "Click blocks to rotate them"
                 TwinkleGame.Game
                     [
                         Margin  .Value  <| Thickness.Uniform 4.F
-                        Bounds  .Value  <| BoundingBox.New MinPos MinPos MaxSize MinSize
+                        Bounds  .Value  <| BoundingBox.CenterMin
                     ]
 //                TextButton "Click me!"
 //                    [

@@ -354,6 +354,7 @@ type Placement =
 [<StructuralComparison>]
 type PositionUnit =
     | MinPos
+    | CenterPos
     | MaxPos
     static member Clamp (x : PositionUnit) = x
 
@@ -383,10 +384,12 @@ type BoundingBox =
         Height  : SizeUnit
     }
     static member New (x : PositionUnit) (y : PositionUnit) (width : SizeUnit) (height : SizeUnit) = {X = PositionUnit.Clamp x; Y = PositionUnit.Clamp y; Width = SizeUnit.Clamp width; Height = SizeUnit.Clamp height}
-    static member MinMin = BoundingBox.New MinPos MinPos MinSize MinSize
-    static member MinMax = BoundingBox.New MinPos MinPos MaxSize MaxSize
-    static member MaxMin = BoundingBox.New MaxPos MaxPos MinSize MinSize
-    static member MaxMax = BoundingBox.New MaxPos MaxPos MaxSize MaxSize
+    static member MinMin    = BoundingBox.New MinPos MinPos MinSize MinSize
+    static member MinMax    = BoundingBox.New MinPos MinPos MaxSize MaxSize
+    static member CenterMin = BoundingBox.New CenterPos CenterPos MinSize MinSize
+    static member CenterMax = BoundingBox.New CenterPos CenterPos MaxSize MaxSize
+    static member MaxMin    = BoundingBox.New MaxPos MaxPos MinSize MinSize
+    static member MaxMax    = BoundingBox.New MaxPos MaxPos MaxSize MaxSize
 
     member x.AdjustMeasurement (a : Available) (m : Measurement) =
                 let ww = x.AdjustMeasurementUnit a.Width  x.X x.Width  m.Width
@@ -412,9 +415,13 @@ type BoundingBox =
                         | FixedMeasurement m, MinPos        , MinSize    -> ppos,min m psize
                         | FixedMeasurement m, MaxPos        , MinSize    -> let size = min m psize
                                                                             ppos + psize - size,size
+                        | FixedMeasurement m, CenterPos     , MinSize    -> let size = min m psize
+                                                                            ppos + (psize - size) / 2.0F,size
                         | _                 , MinPos        , FixedSize s-> ppos,min s psize
                         | _                 , MaxPos        , FixedSize s-> let size = min s psize
                                                                             ppos + psize - size,size
+                        | _                 , CenterPos     , FixedSize s-> let size = min s psize
+                                                                            ppos + (psize - size) / 2.0F,size
                         | _                 , _             , _          -> ppos,psize
 
 

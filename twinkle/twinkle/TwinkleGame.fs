@@ -514,8 +514,8 @@ module TwinkleGame =
                         let width   = (float32 board.Columns) * side
                         let height  = (float32 board.Rows) * side
 
-                        let offsetx = i.X + (i.Width - width) / 2.0F
-                        let offsety = i.Y + (i.Height - height) / 2.0F
+                        let offsetx = i.X
+                        let offsety = i.Y
 
                         let transform (state : ApplicationState)    =
                             Matrix3x2.Translation (offsetx, offsety)

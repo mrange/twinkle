@@ -84,6 +84,10 @@ module public Elements =
         type [<AbstractClass>] LayoutElement() =
             inherit ContainerElement()
 
+            static do
+                Element.Bounds.Override<LayoutElement> (Some <| Value BoundingBox.MinMax) None
+                
+
             let children    = SortedDictionary<int, Element>()
 
             let mutable cachedChildren = None
@@ -111,6 +115,9 @@ module public Elements =
 
         type DocumentElement(ctx : ElementContext) as x=
             inherit DecoratorElement()
+
+            static do
+                Element.Bounds.Override<DocumentElement> (Some <| Value BoundingBox.MinMax) None
 
             do
                 x.Set Element.ElementContext <| Some ctx

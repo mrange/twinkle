@@ -250,7 +250,7 @@ module public Elements =
 
             static let buttonState              = Persistent    "ButtonState"       InvalidateVisual        <| Value ButtonState.Normal
 
-            static let borderThickness          = Persistent    "BorderThickness"   InvalidateMeasurement   <| Value 4.0F
+            static let borderThickness          = Persistent    "BorderThickness"   InvalidateMeasurement   <| Value 3.0F
 
             static let highlight, highlightKey  = Brush         "Highlight"         <| AsSolidBrush Color.Purple
             static let pressed, pressedKey      = Brush         "Pressed"           <| AsSolidBrush Color.LightBlue
@@ -260,7 +260,7 @@ module public Elements =
 
             static do
                 Element.Foreground.Override<ButtonElement> (Some <| Value (AsSolidBrush Color.White)) None
-                Element.Background.Override<ButtonElement> (Some <| Value (AsSolidBrush Color.Transparent)) None
+                Element.Background.Override<ButtonElement> (Some <| Value (SolidColor ("#555".ToColorDescriptor()))) None
                 DecoratorElement.Padding.Override<ButtonElement> (Some <| Value (Thickness.New 16.F 4.F 16.F 4.F)) None
 
             static member ButtonState       = buttonState
@@ -285,15 +285,26 @@ module public Elements =
                             let state           = x.Get ButtonElement.ButtonState
                             let borderThickness = x.Get ButtonElement.BorderThickness
                             let borderKey       = x.Get ButtonElement.BorderKey
+                            let backgroundKey   = x.Get ButtonElement.BackgroundKey
+                            let highlightKey    = x.Get ButtonElement.HighlightKey
+                            let pressedKey      = x.Get ButtonElement.PressedKey
 
                             let backgroundKey =
                                 match state with
-                                | Normal        -> x.Get ButtonElement.BackgroundKey
-                                | Highlighted   -> x.Get ButtonElement.HighlightKey
-                                | Pressed       -> x.Get ButtonElement.PressedKey
+                                | Normal        -> backgroundKey
+                                | Highlighted   -> highlightKey
+                                | Pressed       -> pressedKey
+
+                            let background (a : ApplicationState) =
+                                if rect.Contains a.CurrentMouse.Coordinate then
+                                    highlightKey, 1.F
+                                else
+                                    backgroundKey, 1.F
+                                    
+
                             VisualTree.Rectangle (
                                 borderKey       |> Animated.Brush.Opaque,
-                                backgroundKey   |> Animated.Brush.Opaque,
+                                background                              ,
                                 rect            |> Animated.Constant    ,
                                 borderThickness |> Animated.Constant
                                 )

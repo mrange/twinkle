@@ -1,7 +1,7 @@
 ﻿TODO:
 =====
 
-NEXT: 20
+NEXT: 21
 
 Working on
 ----------
@@ -25,6 +25,7 @@ Features
 05. Add support for caching of subtrees
 18. Add support for D2D layers
 19. Improve opacity support (possible need to use layers)
+20. Support DPI
 06. Use units to avoid mixing up floats representing different concepts
 
 

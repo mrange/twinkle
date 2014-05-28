@@ -256,7 +256,7 @@ module public Elements =
             static let pressed, pressedKey      = Brush         "Pressed"           <| AsSolidBrush Color.LightBlue
             static let border, borderKey        = Brush         "Border"            <| AsSolidBrush Color.White
 
-            static let clicked                  = Routed        "Clicked"          ()
+            static let clicked                  = Routed        "Clicked"           MouseButtonStates.Empty, MouseButtonStates.Empty
 
             static do
                 Element.Foreground.Override<ButtonElement> (Some <| Value (AsSolidBrush Color.White)) None

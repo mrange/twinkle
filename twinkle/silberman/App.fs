@@ -200,33 +200,40 @@ module public App =
             let mouseState      = ref <| MouseState.Zero
             let nextMouseState  = ref <| MouseState.Zero
 
-            let available = ref <| Available.New (AvailableUnit.Bound <| float32 width) (AvailableUnit.Bound <| float32 height)
-            let placement = ref <| Placement.New 0.F 0.F (float32 width) (float32 height)
+            let available = ref <| Available.Zero
+            let placement = ref <| Placement.Zero
+
+            let updateSizes (w : float32, h : float32) = 
+                available := Available.New (AvailableUnit.Bound w) (AvailableUnit.Bound h)
+                placement := Placement.New 0.F 0.F w h
+
+            let updateUI () =
+                ignore <| document.MeasureElement !available
+                ignore <| document.PlaceElement !placement
+
+                let vt = document.Render ()
+
+                toui.Enqueue <| NewVisual vt
+
+            updateSizes (float32 width, float32 height)
+            updateUI ()
 
             try
 
                 while !cont && not <| ct.IsCancellationRequested do
 
-                    let waitFor = int <| 100.F *  max 0.F (!nextRebuild - CurrentTime ()) + 0.5F
-
-                    let! fromMessages = fromui.AsyncDequeue waitFor
+                    let! fromMessages = fromui.AsyncDequeue 1000
 
                     if fromMessages.Length > 0 then
                         for fromMessage in fromMessages do
                             match fromMessage with
                             | ShutDownApplication   -> cont := false
-                            | Resized (w,h)         -> document.InvalidateMeasurement ()
+                            | Resized (w,h)         -> updateSizes (w,h)
+                                                       document.InvalidateMeasurement ()
                             | MouseChange ms        -> nextMouseState := ms
-                            | Exception e           -> ()
-                    else
-                        nextRebuild := CurrentTime () + 1000.F
+                            | Exception e           -> LogException e
 
-                        ignore <| document.MeasureElement !available
-                        ignore <| document.PlaceElement !placement
-                        let vt = document.Render ()
-
-                        toui.Enqueue <| NewVisual vt
-                        ()
+                    updateUI ()
 
             finally
                 toui.Enqueue <| ShutDownUI

@@ -290,7 +290,6 @@ module internal UtilsAutoOpen =
             else
                 lock safe <| fun () -> x.TryFindBase_NoLock k
 
-
 module internal Async =
     let SwitchToThread2 (state : ApartmentState) (tp : ThreadPriority): Async<unit> =
         Async.FromContinuations <| fun (cont, econt, ccont) ->
